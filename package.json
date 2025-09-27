@@ -16,8 +16,10 @@
     "db:seed": "node src/database/seeders/seed.js",
     "db:test": "node scripts/test-db-connection.js",
     "build": "npm run lint && npm run test",
-    "docker:build": "docker build -t zaira-backend .",
-    "docker:run": "docker run -p 3000:3000 zaira-backend"
+    "docker:build": "docker build -t vcba-backend .",
+    "docker:run": "docker run -p 3000:3000 vcba-backend",
+    "deploy": "chmod +x deploy.sh && ./deploy.sh",
+    "heroku-postbuild": "npm run build"
   },
   "keywords": [
     "nodejs",
