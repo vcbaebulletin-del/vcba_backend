@@ -255,11 +255,14 @@ router.delete('/:eventId', adminOnly, requireManageCalendarEvents, eventIdValida
 // Event attachment routes (admin only)
 router.get('/:eventId/attachments', adminOnly, eventIdValidation, validateRequest, auditCRUD('calendar_attachments', { action: 'READ' }), CalendarController.getEventAttachments);
 router.post('/:eventId/attachments', adminOnly, handleCalendarImageUpload, eventIdValidation, validateRequest, auditFileAction('UPLOAD_EVENT_ATTACHMENT'), CalendarController.uploadEventAttachment);
-router.put('/attachments/:attachmentId', adminOnly, handleCalendarImageUpload, auditFileAction('UPDATE_EVENT_ATTACHMENT'), CalendarController.updateEventAttachment);
-router.put('/:eventId/attachments/order', adminOnly, eventIdValidation, validateRequest, auditContentAction('UPDATE_ATTACHMENT_ORDER', 'calendar_events'), CalendarController.updateAttachmentOrder);
+// TODO: Implement updateEventAttachment method in CalendarController
+// router.put('/attachments/:attachmentId', adminOnly, handleCalendarImageUpload, auditFileAction('UPDATE_EVENT_ATTACHMENT'), CalendarController.updateEventAttachment);
+// TODO: Implement updateAttachmentOrder method in CalendarController
+// router.put('/:eventId/attachments/order', adminOnly, eventIdValidation, validateRequest, auditContentAction('UPDATE_ATTACHMENT_ORDER', 'calendar_events'), CalendarController.updateAttachmentOrder);
 router.put('/:eventId/attachments/:attachmentId/primary', adminOnly, eventIdValidation, validateRequest, auditContentAction('SET_PRIMARY_ATTACHMENT', 'calendar_events'), CalendarController.setPrimaryAttachment);
 router.delete('/attachments/:attachmentId', adminOnly, auditFileAction('DELETE_EVENT_ATTACHMENT'), CalendarController.deleteEventAttachment);
-router.put('/:eventId/attachments/:attachmentId/primary', adminOnly, eventIdValidation, validateRequest, auditContentAction('SET_PRIMARY_ATTACHMENT', 'calendar_events'), CalendarController.setPrimaryAttachment);
+// Removed duplicate route - already defined above
+// router.put('/:eventId/attachments/:attachmentId/primary', adminOnly, eventIdValidation, validateRequest, auditContentAction('SET_PRIMARY_ATTACHMENT', 'calendar_events'), CalendarController.setPrimaryAttachment);
 
 // Event management routes (admin only)
 router.put('/:eventId/publish', adminOnly, requireManageCalendarEvents, eventIdValidation, validateRequest, auditContentAction('PUBLISH', 'calendar_events'), CalendarController.publishEvent);
