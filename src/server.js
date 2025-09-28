@@ -3,6 +3,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const compression = require('compression');
 const morgan = require('morgan');
+const path = require('path');
 const { createServer } = require('http');
 const { Server } = require('socket.io');
 require('express-async-errors');
@@ -143,8 +144,40 @@ app.use('/api', (req, res, next) => {
 // Import image optimization middleware
 const { optimizeImage, addImageCacheHeaders } = require('./middleware/imageOptimization');
 
+// Define absolute paths for static directories
+const publicDir = path.join(__dirname, '../public');
+const uploadsDir = path.join(__dirname, '../public/uploads');
+
+console.log('📁 Static file directories:');
+console.log('   Public directory:', publicDir);
+console.log('   Uploads directory:', uploadsDir);
+
+// Verify directories exist
+const fs = require('fs');
+try {
+  if (fs.existsSync(publicDir)) {
+    console.log('✅ Public directory exists');
+    const publicFiles = fs.readdirSync(publicDir);
+    console.log('   Public contents:', publicFiles.slice(0, 5).join(', ') + (publicFiles.length > 5 ? '...' : ''));
+  } else {
+    console.log('❌ Public directory does not exist');
+  }
+
+  if (fs.existsSync(uploadsDir)) {
+    console.log('✅ Uploads directory exists');
+    const uploadFiles = fs.readdirSync(uploadsDir);
+    console.log('   Upload contents:', uploadFiles.slice(0, 5).join(', ') + (uploadFiles.length > 5 ? '...' : ''));
+  } else {
+    console.log('❌ Uploads directory does not exist');
+  }
+} catch (error) {
+  console.log('⚠️ Error checking directories:', error.message);
+}
+
 // Serve static files with explicit CORS headers and image optimization
 app.use('/uploads', (req, res, next) => {
+  console.log(`🖼️ Static file request: ${req.method} ${req.url} from ${req.get('origin') || 'unknown'}`);
+
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Cache-Control, cache-control, Pragma, pragma, Expires, expires');
@@ -154,15 +187,22 @@ app.use('/uploads', (req, res, next) => {
 
   // Handle preflight requests
   if (req.method === 'OPTIONS') {
+    console.log('   → Handling OPTIONS preflight request');
     res.sendStatus(200);
     return;
   }
 
   next();
-}, addImageCacheHeaders, optimizeImage, express.static('public/uploads'));
+}, addImageCacheHeaders, optimizeImage, express.static(uploadsDir));
 
 // Serve other static files with image optimization
-app.use(addImageCacheHeaders, optimizeImage, express.static('public'));
+app.use((req, res, next) => {
+  // Only log static file requests (not API routes)
+  if (req.url.match(/\.(jpg|jpeg|png|gif|ico|css|js|html|svg|webp)$/i)) {
+    console.log(`📁 Public file request: ${req.method} ${req.url} from ${req.get('origin') || 'unknown'}`);
+  }
+  next();
+}, addImageCacheHeaders, optimizeImage, express.static(publicDir));
 
 // Logging middleware
 if (config.env !== 'test') {
