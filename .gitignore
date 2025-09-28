@@ -119,19 +119,19 @@ public/uploads/
 .dockerignore
 docker-compose.override.yml
 
-# Test and debug files
-test-*.js
-debug-*.js
-*-test.js
-*-debug.js
-comprehensive-*.js
-create-test-*.js
-check-*.js
-explore-*.js
-examine-*.js
-fix-*.js
-implement-*.js
-initialize-*.js
-final-*.js
-direct-*.js
-clean-*.js
+# Test and debug files - COMMENTED OUT: We need these files for development
+# test-*.js
+# debug-*.js
+# *-test.js
+# *-debug.js
+# comprehensive-*.js
+# create-test-*.js
+# check-*.js
+# explore-*.js
+# examine-*.js
+# fix-*.js
+# implement-*.js
+# initialize-*.js
+# final-*.js
+# direct-*.js
+# clean-*.js
