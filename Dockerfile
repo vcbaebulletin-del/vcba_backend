@@ -13,6 +13,9 @@ RUN npm ci --only=production
 # Copy application code
 COPY src/ ./src/
 
+# Copy public directory for static files
+COPY public/ ./public/
+
 # Create logs directory
 RUN mkdir -p logs
 
