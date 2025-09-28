@@ -351,20 +351,26 @@ class AnnouncementController {
       }
     }
 
-    // Handle visibility date fields
+    // Handle visibility date fields with debug logging
     if (req.body.visibility_start_at !== undefined) {
+      console.log('🔍 UPDATE - visibility_start_at received:', req.body.visibility_start_at, typeof req.body.visibility_start_at);
       if (req.body.visibility_start_at === '' || req.body.visibility_start_at === null) {
         updateData.visibility_start_at = null;
+        console.log('🔍 UPDATE - visibility_start_at set to null');
       } else {
         updateData.visibility_start_at = req.body.visibility_start_at;
+        console.log('🔍 UPDATE - visibility_start_at set to:', updateData.visibility_start_at);
       }
     }
 
     if (req.body.visibility_end_at !== undefined) {
+      console.log('🔍 UPDATE - visibility_end_at received:', req.body.visibility_end_at, typeof req.body.visibility_end_at);
       if (req.body.visibility_end_at === '' || req.body.visibility_end_at === null) {
         updateData.visibility_end_at = null;
+        console.log('🔍 UPDATE - visibility_end_at set to null');
       } else {
         updateData.visibility_end_at = req.body.visibility_end_at;
+        console.log('🔍 UPDATE - visibility_end_at set to:', updateData.visibility_end_at);
       }
     }
 

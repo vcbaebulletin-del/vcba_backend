@@ -26,9 +26,9 @@ class AnnouncementModel extends BaseModel {
         is_alert: data.is_alert !== undefined ? Boolean(data.is_alert) : false,
         allow_comments: data.allow_comments !== undefined ? Boolean(data.allow_comments) : true,
         allow_sharing: data.allow_sharing !== undefined ? Boolean(data.allow_sharing) : true,
-        scheduled_publish_at: data.scheduled_publish_at || null,
-        visibility_start_at: data.visibility_start_at || null,
-        visibility_end_at: data.visibility_end_at || null,
+        scheduled_publish_at: this.formatDateTimeForMySQL(data.scheduled_publish_at),
+        visibility_start_at: this.formatDateTimeForMySQL(data.visibility_start_at),
+        visibility_end_at: this.formatDateTimeForMySQL(data.visibility_end_at),
         published_at: data.status === 'published' ? new Date() : null,
         created_at: new Date(),
         updated_at: new Date()
@@ -424,6 +424,52 @@ class AnnouncementModel extends BaseModel {
     }
   }
 
+  // Helper method to format datetime for MySQL
+  formatDateTimeForMySQL(dateValue) {
+    if (!dateValue || dateValue === '' || dateValue === null) {
+      return null;
+    }
+
+    try {
+      // Handle different input formats
+      let date;
+
+      if (typeof dateValue === 'string') {
+        // Handle datetime-local format (YYYY-MM-DDTHH:MM)
+        if (dateValue.includes('T') && !dateValue.includes('Z') && !dateValue.includes('+')) {
+          // This is likely a datetime-local input, treat as Philippines timezone
+          date = new Date(dateValue + ':00+08:00'); // Add seconds and Philippines timezone
+        } else {
+          // Handle ISO strings or other formats
+          date = new Date(dateValue);
+        }
+      } else if (dateValue instanceof Date) {
+        date = dateValue;
+      } else {
+        return null;
+      }
+
+      // Check if date is valid
+      if (isNaN(date.getTime())) {
+        console.warn('Invalid date value:', dateValue);
+        return null;
+      }
+
+      // Format as MySQL DATETIME (YYYY-MM-DD HH:MM:SS)
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      const seconds = String(date.getSeconds()).padStart(2, '0');
+
+      return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+    } catch (error) {
+      console.warn('Error formatting datetime for MySQL:', dateValue, error.message);
+      return null;
+    }
+  }
+
   // Update announcement
   async updateAnnouncement(id, data) {
     try {
@@ -448,10 +494,10 @@ class AnnouncementModel extends BaseModel {
           if (value !== undefined) {
             updateData[field] = value === true || value === 1 || value === '1' || value === 'true';
           }
-        } else if (field === 'scheduled_publish_at') {
-          // Date field - can be null for non-scheduled announcements
+        } else if (['scheduled_publish_at', 'visibility_start_at', 'visibility_end_at', 'published_at', 'approved_at'].includes(field)) {
+          // DateTime fields - format properly for MySQL
           if (value !== undefined) {
-            updateData[field] = value === '' ? null : value;
+            updateData[field] = this.formatDateTimeForMySQL(value);
           }
         } else {
           // Regular fields - must have actual content
