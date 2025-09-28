@@ -82,9 +82,11 @@ app.use((req, res, next) => {
   })(req, res, next);
 });
 
-// CORS configuration - more permissive for static files
+// CORS configuration - Production-ready with explicit credentials support
 app.use(cors({
   origin: function (origin, callback) {
+    console.log('🔍 CORS Origin Check:', { origin, configOrigins: config.cors.origin });
+
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
 
@@ -95,15 +97,18 @@ app.use(cors({
 
     // Allow configured origins
     if (config.cors.origin.includes(origin)) {
+      console.log('✅ CORS Origin allowed:', origin);
       return callback(null, true);
     }
 
-    return callback(null, true); // Allow all for now to fix urgent issue
+    console.log('❌ CORS Origin rejected:', origin);
+    return callback(new Error(`CORS policy violation: Origin ${origin} not allowed`), false);
   },
-  credentials: config.cors.credentials,
+  credentials: true, // Explicitly set to true for production
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Origin', 'Accept', 'Cache-Control', 'cache-control', 'Pragma', 'pragma', 'Expires', 'expires'],
   exposedHeaders: ['Content-Length', 'Content-Type'],
+  optionsSuccessStatus: 200, // Some legacy browsers choke on 204
 }));
 
 // Rate limiting removed per user request
@@ -114,6 +119,26 @@ app.use(compression());
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Additional CORS headers middleware for API routes
+app.use('/api', (req, res, next) => {
+  const origin = req.headers.origin;
+  if (config.cors.origin.includes(origin)) {
+    res.header('Access-Control-Allow-Origin', origin);
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Origin, Accept, Cache-Control, cache-control, Pragma, pragma, Expires, expires');
+    res.header('Access-Control-Expose-Headers', 'Content-Length, Content-Type');
+  }
+
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    res.sendStatus(200);
+    return;
+  }
+
+  next();
+});
 
 // Import image optimization middleware
 const { optimizeImage, addImageCacheHeaders } = require('./middleware/imageOptimization');
@@ -259,7 +284,7 @@ console.log(`🔧 HTTP server created, preparing to listen on port ${PORT}`);
 
 const io = new Server(server, {
   cors: {
-    origin: process.env.FRONTEND_URL || "http://localhost:3000",
+    origin: config.cors.origin, // Use the same CORS origins as the main app
     methods: ["GET", "POST"],
     credentials: true
   },
@@ -267,6 +292,7 @@ const io = new Server(server, {
   serveClient: true,
   allowEIO3: true
 });
+console.log('✅ Socket.IO CORS configured for origins:', config.cors.origin);
 console.log('✅ Socket.IO instance created');
 
 // Socket.IO connection handling
