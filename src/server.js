@@ -149,6 +149,8 @@ const publicDir = path.join(__dirname, '../public');
 const uploadsDir = path.join(__dirname, '../public/uploads');
 
 console.log('📁 Static file directories:');
+console.log('   __dirname:', __dirname);
+console.log('   process.cwd():', process.cwd());
 console.log('   Public directory:', publicDir);
 console.log('   Uploads directory:', uploadsDir);
 
@@ -161,6 +163,14 @@ try {
     console.log('   Public contents:', publicFiles.slice(0, 5).join(', ') + (publicFiles.length > 5 ? '...' : ''));
   } else {
     console.log('❌ Public directory does not exist');
+    // Try alternative paths
+    const altPublicDir = path.join(process.cwd(), 'public');
+    console.log('   Trying alternative path:', altPublicDir);
+    if (fs.existsSync(altPublicDir)) {
+      console.log('✅ Alternative public directory exists');
+    } else {
+      console.log('❌ Alternative public directory also does not exist');
+    }
   }
 
   if (fs.existsSync(uploadsDir)) {
@@ -169,6 +179,14 @@ try {
     console.log('   Upload contents:', uploadFiles.slice(0, 5).join(', ') + (uploadFiles.length > 5 ? '...' : ''));
   } else {
     console.log('❌ Uploads directory does not exist');
+    // Try alternative paths
+    const altUploadsDir = path.join(process.cwd(), 'public/uploads');
+    console.log('   Trying alternative uploads path:', altUploadsDir);
+    if (fs.existsSync(altUploadsDir)) {
+      console.log('✅ Alternative uploads directory exists');
+    } else {
+      console.log('❌ Alternative uploads directory also does not exist');
+    }
   }
 } catch (error) {
   console.log('⚠️ Error checking directories:', error.message);
@@ -222,6 +240,44 @@ app.get('/health', (req, res) => {
     environment: config.env,
     version: process.env.npm_package_version || '1.0.0',
   });
+});
+
+// Diagnostic endpoint for Railway debugging
+app.get('/api/debug/paths', (req, res) => {
+  const fs = require('fs');
+  const diagnostics = {
+    __dirname,
+    'process.cwd()': process.cwd(),
+    'publicDir': publicDir,
+    'uploadsDir': uploadsDir,
+    'publicExists': fs.existsSync(publicDir),
+    'uploadsExists': fs.existsSync(uploadsDir),
+    'altPublicExists': fs.existsSync(path.join(process.cwd(), 'public')),
+    'altUploadsExists': fs.existsSync(path.join(process.cwd(), 'public/uploads')),
+    'environment': process.env.NODE_ENV || 'development',
+    'platform': process.platform,
+    'nodeVersion': process.version
+  };
+
+  // Try to list directory contents
+  try {
+    if (fs.existsSync(publicDir)) {
+      diagnostics.publicContents = fs.readdirSync(publicDir);
+    }
+    if (fs.existsSync(uploadsDir)) {
+      diagnostics.uploadsContents = fs.readdirSync(uploadsDir).slice(0, 10); // Limit to first 10
+    }
+
+    // Check alternative paths
+    const altPublic = path.join(process.cwd(), 'public');
+    if (fs.existsSync(altPublic)) {
+      diagnostics.altPublicContents = fs.readdirSync(altPublic);
+    }
+  } catch (error) {
+    diagnostics.error = error.message;
+  }
+
+  res.json(diagnostics);
 });
 
 // API routes with error handling
