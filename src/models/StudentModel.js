@@ -60,6 +60,7 @@ class StudentModel extends BaseModel {
           suffix: profileData.suffix || null,
           phone_number: profileData.phone_number,
           grade_level: profileData.grade_level,
+          section: profileData.section || 1, // Default to 1 if not provided
           parent_guardian_name: profileData.parent_guardian_name || null,
           parent_guardian_phone: profileData.parent_guardian_phone || null,
           address: profileData.address || null,
@@ -70,8 +71,8 @@ class StudentModel extends BaseModel {
 
         // Insert student profile
         await connection.execute(
-          `INSERT INTO student_profiles (student_id, first_name, middle_name, last_name, suffix, phone_number, grade_level, parent_guardian_name, parent_guardian_phone, address, profile_picture, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          `INSERT INTO student_profiles (student_id, first_name, middle_name, last_name, suffix, phone_number, grade_level, section, parent_guardian_name, parent_guardian_phone, address, profile_picture, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           Object.values(studentProfile),
         );
 
