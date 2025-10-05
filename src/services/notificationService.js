@@ -80,24 +80,6 @@ class NotificationService {
   }
 
   /**
-   * Safely truncate text and handle encoding issues
-   */
-  safeTruncate(text, maxLength = 200) {
-    if (!text || typeof text !== 'string') return '';
-    const cleanText = text.trim();
-    if (cleanText.length <= maxLength) return cleanText;
-    return cleanText.substring(0, maxLength) + '...';
-  }
-
-  /**
-   * Safely format title with emoji
-   */
-  safeFormatTitle(emoji, prefix, title) {
-    const safeTitle = title && typeof title === 'string' ? title.trim() : 'Untitled';
-    return `${emoji} ${prefix}: ${safeTitle}`;
-  }
-
-  /**
    * Notify about new announcement
    */
   async notifyNewAnnouncement(announcement, recipients) {
@@ -105,19 +87,16 @@ class NotificationService {
       const notifications = [];
 
       for (const recipient of recipients) {
-        const announcementTitle = announcement.title || 'Untitled Announcement';
-        const announcementContent = announcement.content || '';
-
         const notificationData = {
           recipient_type: recipient.type,
           recipient_id: recipient.id,
-          notification_type_id: announcement.is_alert ?
-            NotificationService.TYPES.ALERT_ANNOUNCEMENT :
+          notification_type_id: announcement.is_alert ? 
+            NotificationService.TYPES.ALERT_ANNOUNCEMENT : 
             NotificationService.TYPES.NEW_ANNOUNCEMENT,
-          title: announcement.is_alert ?
-            this.safeFormatTitle('🚨', 'Alert', announcementTitle) :
-            this.safeFormatTitle('📢', 'New Announcement', announcementTitle),
-          message: this.safeTruncate(announcementContent, 200),
+          title: announcement.is_alert ? 
+            `🚨 Alert: ${announcement.title}` : 
+            `📢 New Announcement: ${announcement.title}`,
+          message: announcement.content.substring(0, 200) + (announcement.content.length > 200 ? '...' : ''),
           related_announcement_id: announcement.announcement_id
         };
 
@@ -127,9 +106,9 @@ class NotificationService {
 
       return notifications;
     } catch (error) {
-      logger.error('Failed to notify about new announcement', {
+      logger.error('Failed to notify about new announcement', { 
         error: error.message,
-        announcementId: announcement.announcement_id
+        announcementId: announcement.announcement_id 
       });
       throw error;
     }
@@ -149,25 +128,21 @@ class NotificationService {
       // Get replier's name for personalized notifications
       const replierName = await this.getActorName(comment.user_id, comment.user_type);
 
-      // Safely extract values with fallbacks
-      const commentText = this.safeTruncate(comment.comment_text || '', 100);
-      const announcementTitle = announcement.title || 'Untitled';
-
       // Create personalized notification based on replier type
       let title, message;
       if (comment.user_type === 'admin' && parentComment.user_type === 'student') {
         // Admin replying to student comment - enhanced notification
         title = `💬 Admin ${replierName} replied to your comment`;
-        message = `Admin ${replierName} replied: "${commentText}" on "${announcementTitle}"`;
+        message = `Admin ${replierName} replied: "${comment.comment_text.substring(0, 100)}${comment.comment_text.length > 100 ? '...' : ''}" on "${announcement.title}"`;
       } else if (comment.user_type === 'student' && parentComment.user_type === 'admin') {
         // Student replying to admin comment
         title = `💬 A student replied to your comment`;
-        message = `"${commentText}" on "${announcementTitle}"`;
+        message = `"${comment.comment_text.substring(0, 100)}${comment.comment_text.length > 100 ? '...' : ''}" on "${announcement.title}"`;
       } else {
         // Default notification (same user type)
         const replierLabel = comment.user_type === 'admin' ? 'An admin' : 'Someone';
         title = `💬 ${replierLabel} replied to your comment`;
-        message = `"${commentText}" on "${announcementTitle}"`;
+        message = `"${comment.comment_text.substring(0, 100)}${comment.comment_text.length > 100 ? '...' : ''}" on "${announcement.title}"`;
       }
 
       const notificationData = {
@@ -254,15 +229,12 @@ class NotificationService {
 
       // Create notification for the announcement author
       const commenterName = comment.user_type === 'student' ? 'A student' : 'Someone';
-      const commentText = this.safeTruncate(comment.comment_text || '', 100);
-      const announcementTitle = announcement.title || 'Untitled';
-
       const notificationData = {
         recipient_type: 'admin',
         recipient_id: announcement.posted_by,
         notification_type_id: NotificationService.TYPES.ANNOUNCEMENT_COMMENT,
         title: `💬 ${commenterName} commented on your announcement`,
-        message: `"${commentText}" on "${announcementTitle}"`,
+        message: `"${comment.comment_text.substring(0, 100)}${comment.comment_text.length > 100 ? '...' : ''}" on "${announcement.title}"`,
         related_announcement_id: announcement.announcement_id,
         related_comment_id: comment.comment_id
       };
@@ -312,15 +284,12 @@ class NotificationService {
 
       // Create notification for the calendar event author
       const commenterName = comment.user_type === 'student' ? 'A student' : 'Someone';
-      const commentText = this.safeTruncate(comment.comment_text || '', 100);
-      const eventTitle = calendarEvent.title || 'Untitled Event';
-
       const notificationData = {
         recipient_type: 'admin',
         recipient_id: calendarEvent.created_by,
         notification_type_id: NotificationService.TYPES.CALENDAR_COMMENT,
         title: `💬 ${commenterName} commented on your calendar event`,
-        message: `"${commentText}" on "${eventTitle}"`,
+        message: `"${comment.comment_text.substring(0, 100)}${comment.comment_text.length > 100 ? '...' : ''}" on "${calendarEvent.title}"`,
         related_announcement_id: calendarEvent.calendar_id, // Use calendar_id for consistency
         related_comment_id: comment.comment_id
       };
@@ -358,25 +327,21 @@ class NotificationService {
       // Get replier's name for personalized notifications
       const replierName = await this.getActorName(comment.user_id, comment.user_type);
 
-      // Safely extract values with fallbacks
-      const commentText = this.safeTruncate(comment.comment_text || '', 100);
-      const eventTitle = calendarEvent.title || 'Untitled Event';
-
       // Create personalized notification based on replier type
       let title, message;
       if (comment.user_type === 'admin' && parentComment.user_type === 'student') {
         // Admin replying to student comment - enhanced notification
         title = `💬 Admin ${replierName} replied to your comment`;
-        message = `Admin ${replierName} replied: "${commentText}" on calendar event "${eventTitle}"`;
+        message = `Admin ${replierName} replied: "${comment.comment_text.substring(0, 100)}${comment.comment_text.length > 100 ? '...' : ''}" on calendar event "${calendarEvent.title}"`;
       } else if (comment.user_type === 'student' && parentComment.user_type === 'admin') {
         // Student replying to admin comment
         title = `💬 A student replied to your comment`;
-        message = `"${commentText}" on calendar event "${eventTitle}"`;
+        message = `"${comment.comment_text.substring(0, 100)}${comment.comment_text.length > 100 ? '...' : ''}" on calendar event "${calendarEvent.title}"`;
       } else {
         // Default notification (same user type)
         const replierLabel = comment.user_type === 'admin' ? 'An admin' : 'Someone';
         title = `💬 ${replierLabel} replied to your comment`;
-        message = `"${commentText}" on calendar event "${eventTitle}"`;
+        message = `"${comment.comment_text.substring(0, 100)}${comment.comment_text.length > 100 ? '...' : ''}" on calendar event "${calendarEvent.title}"`;
       }
 
       const notificationData = {
@@ -444,35 +409,19 @@ class NotificationService {
       if (actorType === 'admin') {
         const AdminModel = require('../models/AdminModel');
         const admin = await AdminModel.getAdminWithProfile(actorId);
-        if (admin && admin.profile) {
-          // Safely extract name parts, handling NULL/undefined values
-          const firstName = admin.profile.first_name || admin.first_name || '';
-          const middleName = admin.profile.middle_name || admin.middle_name || '';
-          const lastName = admin.profile.last_name || admin.last_name || '';
-          const suffix = admin.profile.suffix || admin.suffix || '';
-
-          const nameParts = [firstName, middleName, lastName, suffix]
-            .filter(part => part && typeof part === 'string' && part.trim() !== '');
-
-          const fullName = nameParts.join(' ').trim();
-          return fullName || 'Admin';
+        if (admin) {
+          const nameParts = [admin.first_name, admin.middle_name, admin.last_name, admin.suffix]
+            .filter(part => part && part.trim() !== '');
+          return nameParts.join(' ');
         }
         return 'Admin';
       } else if (actorType === 'student') {
         const StudentModel = require('../models/StudentModel');
         const student = await StudentModel.getStudentWithProfile(actorId);
-        if (student && student.profile) {
-          // Safely extract name parts, handling NULL/undefined values
-          const firstName = student.profile.first_name || student.first_name || '';
-          const middleName = student.profile.middle_name || student.middle_name || '';
-          const lastName = student.profile.last_name || student.last_name || '';
-          const suffix = student.profile.suffix || student.suffix || '';
-
-          const nameParts = [firstName, middleName, lastName, suffix]
-            .filter(part => part && typeof part === 'string' && part.trim() !== '');
-
-          const fullName = nameParts.join(' ').trim();
-          return fullName || 'Student';
+        if (student) {
+          const nameParts = [student.first_name, student.middle_name, student.last_name, student.suffix]
+            .filter(part => part && part.trim() !== '');
+          return nameParts.join(' ');
         }
         return 'Student';
       }
@@ -500,26 +449,21 @@ class NotificationService {
       // Get reactor's name for personalized notifications
       const reactorName = await this.getActorName(reactor.id, reactor.type);
 
-      // Safely extract values with fallbacks
-      const reactionEmoji = reaction.reaction_emoji || '👍';
-      const reactionName = reaction.reaction_name || 'like';
-      const announcementTitle = announcement.title || 'Untitled';
-
       // Create personalized notification based on reactor type
       let title, message;
       if (reactor.type === 'admin' && comment.user_type === 'student') {
         // Admin reacting to student comment - enhanced notification
-        title = `${reactionEmoji} Admin ${reactorName} reacted to your comment`;
-        message = `Admin ${reactorName} gave your comment a ${reactionName} reaction on "${announcementTitle}"`;
+        title = `${reaction.reaction_emoji} Admin ${reactorName} reacted to your comment`;
+        message = `Admin ${reactorName} gave your comment a ${reaction.reaction_name} reaction on "${announcement.title}"`;
       } else if (reactor.type === 'student' && comment.user_type === 'admin') {
         // Student reacting to admin comment
-        title = `${reactionEmoji} A student reacted to your comment`;
-        message = `Your comment on "${announcementTitle}" received a ${reactionName} reaction`;
+        title = `${reaction.reaction_emoji} A student reacted to your comment`;
+        message = `Your comment on "${announcement.title}" received a ${reaction.reaction_name} reaction`;
       } else {
         // Default notification (same user type)
         const actorLabel = reactor.type === 'admin' ? 'An admin' : 'Someone';
-        title = `${reactionEmoji} ${actorLabel} reacted to your comment`;
-        message = `Your comment on "${announcementTitle}" received a ${reactionName} reaction`;
+        title = `${reaction.reaction_emoji} ${actorLabel} reacted to your comment`;
+        message = `Your comment on "${announcement.title}" received a ${reaction.reaction_name} reaction`;
       }
 
       const notificationData = {
@@ -563,17 +507,12 @@ class NotificationService {
         return null;
       }
 
-      // Safely extract values with fallbacks
-      const reactionEmoji = reaction.reaction_emoji || '👍';
-      const reactionName = reaction.reaction_name || 'like';
-      const announcementTitle = announcement.title || 'Untitled';
-
       const notificationData = {
         recipient_type: 'admin', // Announcements are posted by admins
         recipient_id: announcement.posted_by,
         notification_type_id: NotificationService.TYPES.ANNOUNCEMENT_REACTION,
-        title: `${reactionEmoji} Someone reacted to your announcement`,
-        message: `Your announcement "${announcementTitle}" received a ${reactionName} reaction`,
+        title: `${reaction.reaction_emoji} Someone reacted to your announcement`,
+        message: `Your announcement "${announcement.title}" received a ${reaction.reaction_name} reaction`,
         related_announcement_id: announcement.announcement_id
       };
 
@@ -600,23 +539,20 @@ class NotificationService {
       // Get reactor's name for personalized notifications
       const reactorName = await this.getActorName(reactor.id, reactor.type);
 
-      // Safely extract values with fallbacks
-      const eventTitle = calendarEvent.title || 'Untitled Event';
-
       // Create personalized notification based on reactor type
       let title, message;
       if (reactor.type === 'admin') {
         // Admin reacting to calendar event
         title = `❤️ Admin ${reactorName} liked your calendar event`;
-        message = `Admin ${reactorName} liked your calendar event "${eventTitle}"`;
+        message = `Admin ${reactorName} liked your calendar event "${calendarEvent.title}"`;
       } else if (reactor.type === 'student') {
         // Student reacting to calendar event
         title = `❤️ A student liked your calendar event`;
-        message = `Your calendar event "${eventTitle}" received a like from a student`;
+        message = `Your calendar event "${calendarEvent.title}" received a like from a student`;
       } else {
         // Default notification
         title = `❤️ Someone liked your calendar event`;
-        message = `Your calendar event "${eventTitle}" received a like`;
+        message = `Your calendar event "${calendarEvent.title}" received a like`;
       }
 
       const notificationData = {
@@ -655,25 +591,21 @@ class NotificationService {
    */
   async notifyCommentFlagged(comment, flaggedBy, reason, announcement) {
     try {
-      // Safely extract values with fallbacks
-      const announcementTitle = announcement.title || 'Untitled';
-      const flagReason = reason && typeof reason === 'string' ? reason.trim() : '';
-
       const notificationData = {
         recipient_type: comment.user_type,
         recipient_id: comment.user_id,
         notification_type_id: NotificationService.TYPES.COMMENT_FLAGGED,
         title: `⚠️ Your comment has been flagged`,
-        message: `Your comment on "${announcementTitle}" was flagged${flagReason ? ` for: ${flagReason}` : ''}`,
+        message: `Your comment on "${announcement.title}" was flagged${reason ? ` for: ${reason}` : ''}`,
         related_announcement_id: announcement.announcement_id,
         related_comment_id: comment.comment_id
       };
 
       return await this.createNotification(notificationData);
     } catch (error) {
-      logger.error('Failed to notify about flagged comment', {
+      logger.error('Failed to notify about flagged comment', { 
         error: error.message,
-        commentId: comment.comment_id
+        commentId: comment.comment_id 
       });
       throw error;
     }
@@ -686,17 +618,13 @@ class NotificationService {
     try {
       const notifications = [];
 
-      // Safely extract values with fallbacks
-      const announcementTitle = announcement.title || 'Untitled';
-      const announcementContent = this.safeTruncate(announcement.content || '', 200);
-
       for (const recipient of recipients) {
         const notificationData = {
           recipient_type: recipient.type,
           recipient_id: recipient.id,
           notification_type_id: NotificationService.TYPES.PINNED_POST,
-          title: `📌 New Pinned Announcement: ${announcementTitle}`,
-          message: announcementContent,
+          title: `📌 New Pinned Announcement: ${announcement.title}`,
+          message: announcement.content.substring(0, 200) + (announcement.content.length > 200 ? '...' : ''),
           related_announcement_id: announcement.announcement_id
         };
 
@@ -706,9 +634,9 @@ class NotificationService {
 
       return notifications;
     } catch (error) {
-      logger.error('Failed to notify about pinned post', {
+      logger.error('Failed to notify about pinned post', { 
         error: error.message,
-        announcementId: announcement.announcement_id
+        announcementId: announcement.announcement_id 
       });
       throw error;
     }
@@ -747,18 +675,13 @@ class NotificationService {
     try {
       const notifications = [];
 
-      // Safely extract values with fallbacks
-      const eventTitle = calendarEvent.title || 'Untitled Event';
-      const eventDescription = calendarEvent.description || 'New calendar event scheduled';
-      const eventDate = calendarEvent.event_date ? new Date(calendarEvent.event_date).toLocaleDateString() : 'TBD';
-
       for (const recipient of recipients) {
         const notificationData = {
           recipient_type: recipient.type,
           recipient_id: recipient.id,
           notification_type_id: NotificationService.TYPES.CALENDAR_EVENT,
-          title: `📅 New Event: ${eventTitle}`,
-          message: `${eventDescription} on ${eventDate}`,
+          title: `📅 New Event: ${calendarEvent.title}`,
+          message: `${calendarEvent.description || 'New calendar event scheduled'} on ${new Date(calendarEvent.event_date).toLocaleDateString()}`,
           related_announcement_id: calendarEvent.calendar_id // Use calendar_id in announcement field for consistency
         };
 
@@ -825,15 +748,12 @@ class NotificationService {
       // Get approver's name for personalized notification
       const approverName = await this.getActorName(approvedBy.id, 'admin');
 
-      // Safely extract values with fallbacks
-      const announcementTitle = announcement.title || 'Untitled';
-
       const notificationData = {
         recipient_type: 'admin', // Announcements are posted by admins
         recipient_id: announcement.posted_by,
         notification_type_id: NotificationService.TYPES.ANNOUNCEMENT_APPROVAL,
-        title: `✅ Your announcement "${announcementTitle}" has been approved`,
-        message: `Great news! Your announcement "${announcementTitle}" has been approved by ${approverName} and is now published for all users to see.`,
+        title: `✅ Your announcement "${announcement.title}" has been approved`,
+        message: `Great news! Your announcement "${announcement.title}" has been approved by ${approverName} and is now published for all users to see.`,
         related_announcement_id: announcement.announcement_id
       };
 
