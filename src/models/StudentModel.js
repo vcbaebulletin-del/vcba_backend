@@ -60,7 +60,7 @@ class StudentModel extends BaseModel {
           suffix: profileData.suffix || null,
           phone_number: profileData.phone_number,
           grade_level: profileData.grade_level,
-          section: profileData.section || 1, // Default to 1 if not provided
+          section: profileData.section || '1', // Default to '1' if not provided (VARCHAR field)
           parent_guardian_name: profileData.parent_guardian_name || null,
           parent_guardian_phone: profileData.parent_guardian_phone || null,
           address: profileData.address || null,
