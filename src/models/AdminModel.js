@@ -63,7 +63,7 @@ class AdminModel extends BaseModel {
 
         const adminId = accountResult.insertId;
 
-        // Prepare profile data
+        // Prepare profile data with proper defaults to handle Railway database constraints
         console.log('🔍 AdminModel - Input profileData.grade_level:', profileData.grade_level, 'Type:', typeof profileData.grade_level);
 
         const adminProfile = {
@@ -74,15 +74,19 @@ class AdminModel extends BaseModel {
           suffix: profileData.suffix || null,
           phone_number: profileData.phone_number || null,
           department: profileData.department || null,
-          position: profileData.position || null,
-          grade_level: profileData.grade_level || null,
+          position: profileData.position, // Required field, should always be provided
+          grade_level: profileData.grade_level !== undefined ? profileData.grade_level : null,
           bio: profileData.bio || null,
           profile_picture: profileData.profile_picture || null,
           created_at: new Date(),
           updated_at: new Date(),
         };
 
-        console.log('🔍 AdminModel - Final adminProfile.grade_level:', adminProfile.grade_level, 'Type:', typeof adminProfile.grade_level);
+        console.log('🔍 AdminModel - Final adminProfile:', {
+          grade_level: adminProfile.grade_level,
+          position: adminProfile.position,
+          department: adminProfile.department
+        });
 
         // Insert admin profile with better error handling
         try {

@@ -34,8 +34,15 @@ class NotificationService {
    */
   async createNotification(data) {
     try {
+      // Ensure title and message are properly encoded (handle emojis)
+      const sanitizedData = {
+        ...data,
+        title: data.title || '',
+        message: data.message || ''
+      };
+
       // Create notification in database
-      const notification = await NotificationModel.createNotification(data);
+      const notification = await NotificationModel.createNotification(sanitizedData);
 
       // Send real-time notification via WebSocket
       await this.sendRealTimeNotification(notification);
@@ -399,6 +406,25 @@ class NotificationService {
   }
 
   /**
+   * Sanitize text to ensure proper UTF-8 encoding and emoji support
+   * @param {string} text - Text to sanitize
+   * @returns {string} - Sanitized text
+   */
+  sanitizeText(text) {
+    if (!text) return '';
+
+    try {
+      // Ensure text is properly encoded as UTF-8
+      // Remove any invalid UTF-8 sequences
+      return text.toString('utf8');
+    } catch (error) {
+      logger.warn('Failed to sanitize text', { error: error.message });
+      // Fallback: remove problematic characters
+      return text.replace(/[^\x00-\x7F\u0080-\uFFFF]/g, '');
+    }
+  }
+
+  /**
    * Get actor's display name for personalized notifications
    * @param {number} actorId - User ID
    * @param {string} actorType - 'admin' or 'student'
@@ -409,19 +435,31 @@ class NotificationService {
       if (actorType === 'admin') {
         const AdminModel = require('../models/AdminModel');
         const admin = await AdminModel.getAdminWithProfile(actorId);
-        if (admin) {
-          const nameParts = [admin.first_name, admin.middle_name, admin.last_name, admin.suffix]
-            .filter(part => part && part.trim() !== '');
-          return nameParts.join(' ');
+        if (admin && admin.profile) {
+          const nameParts = [
+            admin.profile.first_name || admin.first_name,
+            admin.profile.middle_name || admin.middle_name,
+            admin.profile.last_name || admin.last_name,
+            admin.profile.suffix || admin.suffix
+          ].filter(part => part && part.trim() !== '');
+
+          const fullName = nameParts.join(' ').trim();
+          return fullName || 'Admin';
         }
         return 'Admin';
       } else if (actorType === 'student') {
         const StudentModel = require('../models/StudentModel');
         const student = await StudentModel.getStudentWithProfile(actorId);
-        if (student) {
-          const nameParts = [student.first_name, student.middle_name, student.last_name, student.suffix]
-            .filter(part => part && part.trim() !== '');
-          return nameParts.join(' ');
+        if (student && student.profile) {
+          const nameParts = [
+            student.profile.first_name || student.first_name,
+            student.profile.middle_name || student.middle_name,
+            student.profile.last_name || student.last_name,
+            student.profile.suffix || student.suffix
+          ].filter(part => part && part.trim() !== '');
+
+          const fullName = nameParts.join(' ').trim();
+          return fullName || 'Student';
         }
         return 'Student';
       }

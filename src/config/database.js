@@ -2,7 +2,7 @@ const mysql = require('mysql2/promise');
 const config = require('./config');
 const logger = require('../utils/logger');
 
-// Create connection pool
+// Create connection pool with proper UTF-8 support for emojis
 const pool = mysql.createPool({
   host: config.database.host,
   port: config.database.port,
@@ -10,10 +10,19 @@ const pool = mysql.createPool({
   password: config.database.password,
   database: config.database.database,
   connectionLimit: config.database.connectionLimit,
-  charset: config.database.charset,
+  charset: 'utf8mb4',
+  collation: 'utf8mb4_unicode_ci',
   timezone: config.database.timezone,
   multipleStatements: false,
   namedPlaceholders: true,
+  // Ensure proper character encoding for emojis
+  typeCast: function (field, next) {
+    if (field.type === 'VAR_STRING' || field.type === 'STRING' || field.type === 'TINY_BLOB' || field.type === 'MEDIUM_BLOB' || field.type === 'LONG_BLOB' || field.type === 'BLOB') {
+      const value = field.string();
+      return value ? Buffer.from(value, 'utf8').toString('utf8') : value;
+    }
+    return next();
+  }
 });
 
 // Database utility class
