@@ -75,7 +75,7 @@ class AdminModel extends BaseModel {
           phone_number: profileData.phone_number || null,
           department: profileData.department || null,
           position: profileData.position || null,
-          grade_level: profileData.grade_level || null,
+          grade_level: profileData.grade_level !== undefined && profileData.grade_level !== null ? profileData.grade_level : null,
           bio: profileData.bio || null,
           profile_picture: profileData.profile_picture || null,
           created_at: new Date(),
