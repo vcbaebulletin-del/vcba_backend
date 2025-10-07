@@ -189,6 +189,28 @@ class CalendarModel extends BaseModel {
       params.push(limit, offset);
       const events = await this.db.query(sql, params);
 
+      // Get attachments for each event (similar to AnnouncementModel)
+      for (let event of events) {
+        const attachmentsSql = `
+          SELECT
+            attachment_id,
+            file_name,
+            file_path,
+            file_type,
+            file_size,
+            mime_type,
+            display_order,
+            is_primary,
+            uploaded_at
+          FROM calendar_attachments
+          WHERE calendar_id = ? AND deleted_at IS NULL
+          ORDER BY display_order ASC, uploaded_at ASC
+        `;
+        const attachments = await this.db.query(attachmentsSql, [event.calendar_id]);
+        event.attachments = attachments;
+        event.images = attachments; // For backward compatibility and consistency with announcements
+      }
+
       // Calculate pagination info
       const totalPages = Math.ceil(total / limit);
       const hasNext = page < totalPages;
@@ -233,6 +255,26 @@ class CalendarModel extends BaseModel {
       if (!event) {
         throw new NotFoundError('Calendar event not found');
       }
+
+      // Get attachments for this event
+      const attachmentsSql = `
+        SELECT
+          attachment_id,
+          file_name,
+          file_path,
+          file_type,
+          file_size,
+          mime_type,
+          display_order,
+          is_primary,
+          uploaded_at
+        FROM calendar_attachments
+        WHERE calendar_id = ? AND deleted_at IS NULL
+        ORDER BY display_order ASC, uploaded_at ASC
+      `;
+      const attachments = await this.db.query(attachmentsSql, [event.calendar_id]);
+      event.attachments = attachments;
+      event.images = attachments; // For backward compatibility and consistency with announcements
 
       return this.formatEventDates(event);
     } catch (error) {
@@ -322,7 +364,31 @@ class CalendarModel extends BaseModel {
         ORDER BY sc.event_date ASC
       `;
 
-      return await this.db.query(sql, [date]);
+      const events = await this.db.query(sql, [date]);
+
+      // Get attachments for each event
+      for (let event of events) {
+        const attachmentsSql = `
+          SELECT
+            attachment_id,
+            file_name,
+            file_path,
+            file_type,
+            file_size,
+            mime_type,
+            display_order,
+            is_primary,
+            uploaded_at
+          FROM calendar_attachments
+          WHERE calendar_id = ? AND deleted_at IS NULL
+          ORDER BY display_order ASC, uploaded_at ASC
+        `;
+        const attachments = await this.db.query(attachmentsSql, [event.calendar_id]);
+        event.attachments = attachments;
+        event.images = attachments;
+      }
+
+      return events;
     } catch (error) {
       throw new ValidationError(`Failed to get events by date: ${error.message}`);
     }
@@ -347,7 +413,31 @@ class CalendarModel extends BaseModel {
         ORDER BY sc.event_date ASC
       `;
 
-      return await this.db.query(sql, [startDate, endDate]);
+      const events = await this.db.query(sql, [startDate, endDate]);
+
+      // Get attachments for each event
+      for (let event of events) {
+        const attachmentsSql = `
+          SELECT
+            attachment_id,
+            file_name,
+            file_path,
+            file_type,
+            file_size,
+            mime_type,
+            display_order,
+            is_primary,
+            uploaded_at
+          FROM calendar_attachments
+          WHERE calendar_id = ? AND deleted_at IS NULL
+          ORDER BY display_order ASC, uploaded_at ASC
+        `;
+        const attachments = await this.db.query(attachmentsSql, [event.calendar_id]);
+        event.attachments = attachments;
+        event.images = attachments;
+      }
+
+      return events;
     } catch (error) {
       throw new ValidationError(`Failed to get events by date range: ${error.message}`);
     }
