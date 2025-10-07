@@ -134,21 +134,36 @@ const auditLogger = (options = {}) => {
 const auditAuth = (action, success = true) => {
   return async (req, res, next) => {
     const originalJson = res.json;
+    const originalStatus = res.status;
+
+    // Capture the status code when it's set
+    let capturedStatusCode = 200; // Default to 200
+    res.status = function(code) {
+      capturedStatusCode = code;
+      return originalStatus.call(this, code);
+    };
 
     res.json = function(data) {
+      // Use the captured status code or the current statusCode
+      const finalStatusCode = capturedStatusCode || res.statusCode || 200;
+
+      // Call original json method first
       const result = originalJson.call(this, data);
 
+      // Log audit after response is sent
       setImmediate(async () => {
         try {
           // Determine success based on response data and status code
-          const isSuccess = data && data.success !== false && res.statusCode >= 200 && res.statusCode < 400;
+          const isSuccess = data && data.success !== false && finalStatusCode >= 200 && finalStatusCode < 400;
 
           // Debug logging for logout operations
           if (action.toUpperCase() === 'LOGOUT' || action.toUpperCase() === 'LOGOUT_ALL') {
             logger.info(`[AUDIT DEBUG] ${action} - Response data:`, {
               hasData: !!data,
               dataSuccess: data?.success,
-              statusCode: res.statusCode,
+              capturedStatusCode,
+              finalStatusCode,
+              resStatusCode: res.statusCode,
               isSuccess,
               userEmail: req.user?.email
             });
