@@ -695,6 +695,28 @@ class CalendarModel extends BaseModel {
 
       const baseEvents = await this.db.query(sql);
 
+      // Get attachments for each base event (CRITICAL FIX for TV Display)
+      for (let event of baseEvents) {
+        const attachmentsSql = `
+          SELECT
+            attachment_id,
+            file_name,
+            file_path,
+            file_type,
+            file_size,
+            mime_type,
+            display_order,
+            is_primary,
+            uploaded_at
+          FROM calendar_attachments
+          WHERE calendar_id = ? AND deleted_at IS NULL
+          ORDER BY display_order ASC, uploaded_at ASC
+        `;
+        const attachments = await this.db.query(attachmentsSql, [event.calendar_id]);
+        event.attachments = attachments;
+        event.images = attachments; // For backward compatibility and TV Display
+      }
+
       // Generate all events including recurring instances
       const allEvents = [];
 
