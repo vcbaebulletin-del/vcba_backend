@@ -140,13 +140,18 @@ const auditAuth = (action, success = true) => {
 
       setImmediate(async () => {
         try {
-          const isSuccess = success && data && data.success !== false && res.statusCode < 400;
+          // Determine success based on response data and status code
+          const isSuccess = data && data.success !== false && res.statusCode >= 200 && res.statusCode < 400;
 
           // For logout operations, prioritize req.user (from authenticate middleware)
           // For login operations, use req.body (contains login credentials)
+          // For successful login, use the returned user data from response
           let user;
           if (action.toUpperCase() === 'LOGOUT' || action.toUpperCase() === 'LOGOUT_ALL') {
             user = req.user || {};
+          } else if (action.toUpperCase() === 'LOGIN' && isSuccess && data.data && data.data.user) {
+            // For successful login, use the user data from the response
+            user = data.data.user;
           } else {
             user = req.body || req.user || {};
           }
@@ -156,7 +161,7 @@ const auditAuth = (action, success = true) => {
             action,
             isSuccess,
             {
-              error: !isSuccess ? data?.message : null,
+              error: !isSuccess ? (data?.error?.message || data?.message) : null,
               reason: !isSuccess ? 'Authentication failed' : null
             },
             req
