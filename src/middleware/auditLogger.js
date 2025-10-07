@@ -141,14 +141,50 @@ const auditAuth = (action, success = true) => {
     res.json = function(data) {
       responseData = data;
       statusCode = res.statusCode || 200;
+
+      // Debug logging for LOGOUT operations
+      if (action.toUpperCase() === 'LOGOUT' || action.toUpperCase() === 'LOGOUT_ALL') {
+        logger.info(`[AUDIT] ${action} - res.json() called:`, {
+          data: JSON.stringify(data),
+          statusCode,
+          resStatusCode: res.statusCode,
+          timestamp: new Date().toISOString()
+        });
+      }
+
       return originalJson.call(this, data);
     };
 
     // Use res.on('finish') to log after response is completely sent
     res.on('finish', async () => {
       try {
+        // Debug logging for LOGOUT operations
+        if (action.toUpperCase() === 'LOGOUT' || action.toUpperCase() === 'LOGOUT_ALL') {
+          logger.info(`[AUDIT] ${action} - finish event fired:`, {
+            responseData: JSON.stringify(responseData),
+            responseDataSuccess: responseData?.success,
+            responseDataSuccessType: typeof responseData?.success,
+            statusCode,
+            resStatusCode: res.statusCode,
+            timestamp: new Date().toISOString()
+          });
+        }
+
         // Simple success check: data.success === true AND status code is 2xx
         const isSuccess = responseData && responseData.success === true && statusCode >= 200 && statusCode < 300;
+
+        // Debug logging for LOGOUT operations
+        if (action.toUpperCase() === 'LOGOUT' || action.toUpperCase() === 'LOGOUT_ALL') {
+          logger.info(`[AUDIT] ${action} - isSuccess calculation:`, {
+            hasResponseData: !!responseData,
+            successValue: responseData?.success,
+            successIsTrue: responseData?.success === true,
+            statusCodeInRange: statusCode >= 200 && statusCode < 300,
+            isSuccess,
+            willLogAs: isSuccess ? 'SUCCESSFUL' : 'FAILED',
+            timestamp: new Date().toISOString()
+          });
+        }
 
         // Get user data
         let user;
@@ -170,6 +206,13 @@ const auditAuth = (action, success = true) => {
           },
           req
         );
+
+        // Debug logging for LOGOUT operations
+        if (action.toUpperCase() === 'LOGOUT' || action.toUpperCase() === 'LOGOUT_ALL') {
+          logger.info(`[AUDIT] ${action} - Audit log completed`, {
+            timestamp: new Date().toISOString()
+          });
+        }
       } catch (error) {
         logger.error('Auth audit logging error:', error);
       }
