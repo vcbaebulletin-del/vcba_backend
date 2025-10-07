@@ -134,89 +134,87 @@ const auditLogger = (options = {}) => {
 const auditAuth = (action, success = true) => {
   return async (req, res, next) => {
     const originalJson = res.json;
-    let responseData = null;
-    let statusCode = 200;
+    const originalSend = res.send;
+    let captured = false;
 
-    // Intercept res.json to capture the response data
+    // Intercept res.json to capture and log immediately
     res.json = function(data) {
-      responseData = data;
-      statusCode = res.statusCode || 200;
+      if (!captured) {
+        captured = true;
+        const statusCode = this.statusCode || 200;
 
-      // Debug logging for LOGOUT operations
-      if (action.toUpperCase() === 'LOGOUT' || action.toUpperCase() === 'LOGOUT_ALL') {
-        logger.info(`[AUDIT] ${action} - res.json() called:`, {
-          data: JSON.stringify(data),
-          statusCode,
-          resStatusCode: res.statusCode,
-          timestamp: new Date().toISOString()
+        // Determine success based on response
+        const isSuccess = data && data.success === true && statusCode >= 200 && statusCode < 300;
+
+        // Log immediately (synchronously schedule the async operation)
+        setImmediate(async () => {
+          try {
+            // Get user data
+            let user;
+            if (action.toUpperCase() === 'LOGOUT' || action.toUpperCase() === 'LOGOUT_ALL') {
+              user = req.user || {};
+            } else if (action.toUpperCase() === 'LOGIN' && isSuccess && data.data && data.data.user) {
+              user = data.data.user;
+            } else {
+              user = req.body || req.user || {};
+            }
+
+            await AuditLogService.logAuth(
+              user,
+              action,
+              isSuccess,
+              {
+                error: !isSuccess ? (data?.error?.message || data?.message) : null,
+                reason: !isSuccess ? 'Authentication failed' : null
+              },
+              req
+            );
+          } catch (error) {
+            logger.error('Auth audit logging error:', error);
+          }
         });
       }
 
       return originalJson.call(this, data);
     };
 
-    // Use res.on('finish') to log after response is completely sent
-    res.on('finish', async () => {
-      try {
-        // Debug logging for LOGOUT operations
-        if (action.toUpperCase() === 'LOGOUT' || action.toUpperCase() === 'LOGOUT_ALL') {
-          logger.info(`[AUDIT] ${action} - finish event fired:`, {
-            responseData: JSON.stringify(responseData),
-            responseDataSuccess: responseData?.success,
-            responseDataSuccessType: typeof responseData?.success,
-            statusCode,
-            resStatusCode: res.statusCode,
-            timestamp: new Date().toISOString()
-          });
-        }
+    // Also intercept res.send for edge cases
+    res.send = function(data) {
+      if (!captured && typeof data === 'object') {
+        captured = true;
+        const statusCode = this.statusCode || 200;
 
-        // Simple success check: data.success === true AND status code is 2xx
-        const isSuccess = responseData && responseData.success === true && statusCode >= 200 && statusCode < 300;
+        const isSuccess = data && data.success === true && statusCode >= 200 && statusCode < 300;
 
-        // Debug logging for LOGOUT operations
-        if (action.toUpperCase() === 'LOGOUT' || action.toUpperCase() === 'LOGOUT_ALL') {
-          logger.info(`[AUDIT] ${action} - isSuccess calculation:`, {
-            hasResponseData: !!responseData,
-            successValue: responseData?.success,
-            successIsTrue: responseData?.success === true,
-            statusCodeInRange: statusCode >= 200 && statusCode < 300,
-            isSuccess,
-            willLogAs: isSuccess ? 'SUCCESSFUL' : 'FAILED',
-            timestamp: new Date().toISOString()
-          });
-        }
+        setImmediate(async () => {
+          try {
+            let user;
+            if (action.toUpperCase() === 'LOGOUT' || action.toUpperCase() === 'LOGOUT_ALL') {
+              user = req.user || {};
+            } else if (action.toUpperCase() === 'LOGIN' && isSuccess && data.data && data.data.user) {
+              user = data.data.user;
+            } else {
+              user = req.body || req.user || {};
+            }
 
-        // Get user data
-        let user;
-        if (action.toUpperCase() === 'LOGOUT' || action.toUpperCase() === 'LOGOUT_ALL') {
-          user = req.user || {};
-        } else if (action.toUpperCase() === 'LOGIN' && isSuccess && responseData.data && responseData.data.user) {
-          user = responseData.data.user;
-        } else {
-          user = req.body || req.user || {};
-        }
-
-        await AuditLogService.logAuth(
-          user,
-          action,
-          isSuccess,
-          {
-            error: !isSuccess ? (responseData?.error?.message || responseData?.message) : null,
-            reason: !isSuccess ? 'Authentication failed' : null
-          },
-          req
-        );
-
-        // Debug logging for LOGOUT operations
-        if (action.toUpperCase() === 'LOGOUT' || action.toUpperCase() === 'LOGOUT_ALL') {
-          logger.info(`[AUDIT] ${action} - Audit log completed`, {
-            timestamp: new Date().toISOString()
-          });
-        }
-      } catch (error) {
-        logger.error('Auth audit logging error:', error);
+            await AuditLogService.logAuth(
+              user,
+              action,
+              isSuccess,
+              {
+                error: !isSuccess ? (data?.error?.message || data?.message) : null,
+                reason: !isSuccess ? 'Authentication failed' : null
+              },
+              req
+            );
+          } catch (error) {
+            logger.error('Auth audit logging error:', error);
+          }
+        });
       }
-    });
+
+      return originalSend.call(this, data);
+    };
 
     next();
   };
