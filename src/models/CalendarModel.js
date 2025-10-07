@@ -7,19 +7,32 @@ class CalendarModel extends BaseModel {
   }
 
   // Helper function to format dates consistently
+  // IMPORTANT: Extract date components directly from Date object to avoid timezone conversion issues
+  // Philippine Time (UTC+8) midnight becomes previous day in UTC, so we must use local date components
   formatEventDates(event) {
     if (!event) return event;
 
+    const formatDateWithoutTimezone = (dateValue) => {
+      if (!dateValue) return null;
+
+      if (dateValue instanceof Date) {
+        // Extract date components directly from the Date object (local time)
+        // This avoids timezone conversion issues where midnight PHT becomes previous day in UTC
+        const year = dateValue.getFullYear();
+        const month = String(dateValue.getMonth() + 1).padStart(2, '0');
+        const day = String(dateValue.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      } else if (typeof dateValue === 'string') {
+        // For string dates, extract the date part
+        return dateValue.split('T')[0];
+      }
+      return null;
+    };
+
     return {
       ...event,
-      event_date: event.event_date instanceof Date
-        ? event.event_date.toISOString().split('T')[0]
-        : (event.event_date ? event.event_date.split('T')[0] : null),
-      end_date: event.end_date
-        ? (event.end_date instanceof Date
-            ? event.end_date.toISOString().split('T')[0]
-            : event.end_date.split('T')[0])
-        : null
+      event_date: formatDateWithoutTimezone(event.event_date),
+      end_date: formatDateWithoutTimezone(event.end_date)
     };
   }
 
@@ -49,7 +62,8 @@ class CalendarModel extends BaseModel {
       };
 
       const result = await this.db.insert(this.tableName, eventData);
-      return await this.findById(result.insertId);
+      // Use getEventById to ensure dates are properly formatted
+      return await this.getEventById(result.insertId);
     } catch (error) {
       throw new ValidationError(`Failed to create calendar event: ${error.message}`);
     }
@@ -189,7 +203,7 @@ class CalendarModel extends BaseModel {
       params.push(limit, offset);
       const events = await this.db.query(sql, params);
 
-      // Get attachments for each event (similar to AnnouncementModel)
+      // Get attachments for each event and format dates (similar to AnnouncementModel)
       for (let event of events) {
         const attachmentsSql = `
           SELECT
@@ -211,13 +225,16 @@ class CalendarModel extends BaseModel {
         event.images = attachments; // For backward compatibility and consistency with announcements
       }
 
+      // Format dates for all events to avoid timezone conversion issues
+      const formattedEvents = events.map(event => this.formatEventDates(event));
+
       // Calculate pagination info
       const totalPages = Math.ceil(total / limit);
       const hasNext = page < totalPages;
       const hasPrev = page > 1;
 
       return {
-        events,
+        events: formattedEvents,
         pagination: {
           page,
           limit,
@@ -388,7 +405,10 @@ class CalendarModel extends BaseModel {
         event.images = attachments;
       }
 
-      return events;
+      // Format dates for all events to avoid timezone conversion issues
+      const formattedEvents = events.map(event => this.formatEventDates(event));
+
+      return formattedEvents;
     } catch (error) {
       throw new ValidationError(`Failed to get events by date: ${error.message}`);
     }
@@ -437,7 +457,10 @@ class CalendarModel extends BaseModel {
         event.images = attachments;
       }
 
-      return events;
+      // Format dates for all events to avoid timezone conversion issues
+      const formattedEvents = events.map(event => this.formatEventDates(event));
+
+      return formattedEvents;
     } catch (error) {
       throw new ValidationError(`Failed to get events by date range: ${error.message}`);
     }
