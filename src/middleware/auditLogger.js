@@ -153,19 +153,32 @@ const auditAuth = (action, success = true) => {
       // Log audit after response is sent
       setImmediate(async () => {
         try {
-          // Determine success based on response data and status code
-          const isSuccess = data && data.success !== false && finalStatusCode >= 200 && finalStatusCode < 400;
-
-          // Debug logging for logout operations
+          // Debug logging BEFORE calculation for logout operations
           if (action.toUpperCase() === 'LOGOUT' || action.toUpperCase() === 'LOGOUT_ALL') {
-            logger.info(`[AUDIT DEBUG] ${action} - Response data:`, {
-              hasData: !!data,
+            logger.info(`[AUDIT DEBUG BEFORE] ${action} - Raw values:`, {
+              data: JSON.stringify(data),
+              dataType: typeof data,
               dataSuccess: data?.success,
+              dataSuccessType: typeof data?.success,
               capturedStatusCode,
               finalStatusCode,
               resStatusCode: res.statusCode,
-              isSuccess,
               userEmail: req.user?.email
+            });
+          }
+
+          // Determine success based on response data and status code
+          const isSuccess = data && data.success !== false && finalStatusCode >= 200 && finalStatusCode < 400;
+
+          // Debug logging AFTER calculation for logout operations
+          if (action.toUpperCase() === 'LOGOUT' || action.toUpperCase() === 'LOGOUT_ALL') {
+            logger.info(`[AUDIT DEBUG AFTER] ${action} - Calculated values:`, {
+              hasData: !!data,
+              dataSuccess: data?.success,
+              dataSuccessNotFalse: data?.success !== false,
+              statusCodeCheck: finalStatusCode >= 200 && finalStatusCode < 400,
+              isSuccess,
+              willLogAs: isSuccess ? 'SUCCESSFUL' : 'FAILED'
             });
           }
 
