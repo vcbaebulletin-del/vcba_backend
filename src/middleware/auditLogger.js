@@ -143,6 +143,17 @@ const auditAuth = (action, success = true) => {
           // Determine success based on response data and status code
           const isSuccess = data && data.success !== false && res.statusCode >= 200 && res.statusCode < 400;
 
+          // Debug logging for logout operations
+          if (action.toUpperCase() === 'LOGOUT' || action.toUpperCase() === 'LOGOUT_ALL') {
+            logger.info(`[AUDIT DEBUG] ${action} - Response data:`, {
+              hasData: !!data,
+              dataSuccess: data?.success,
+              statusCode: res.statusCode,
+              isSuccess,
+              userEmail: req.user?.email
+            });
+          }
+
           // For logout operations, prioritize req.user (from authenticate middleware)
           // For login operations, use req.body (contains login credentials)
           // For successful login, use the returned user data from response
