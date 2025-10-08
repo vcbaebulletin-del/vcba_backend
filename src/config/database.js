@@ -12,14 +12,19 @@ const pool = mysql.createPool({
   connectionLimit: config.database.connectionLimit,
   charset: 'utf8mb4',
   collation: 'utf8mb4_unicode_ci',
-  timezone: config.database.timezone,
+  timezone: 'Z', // CRITICAL FIX: Use UTC to prevent date conversion issues
   multipleStatements: false,
   namedPlaceholders: true,
+  dateStrings: true, // CRITICAL FIX: Return dates as strings to prevent timezone conversion
   // Ensure proper character encoding for emojis
   typeCast: function (field, next) {
     if (field.type === 'VAR_STRING' || field.type === 'STRING' || field.type === 'TINY_BLOB' || field.type === 'MEDIUM_BLOB' || field.type === 'LONG_BLOB' || field.type === 'BLOB') {
       const value = field.string();
       return value ? Buffer.from(value, 'utf8').toString('utf8') : value;
+    }
+    // CRITICAL FIX: Return DATE fields as strings to prevent timezone conversion
+    if (field.type === 'DATE') {
+      return field.string();
     }
     return next();
   }
