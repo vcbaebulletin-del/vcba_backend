@@ -719,6 +719,7 @@ class CalendarModel extends BaseModel {
       const baseEvents = await this.db.query(sql);
 
       // Get attachments for each base event (CRITICAL FIX for TV Display)
+      console.log(`🖼️ [CalendarModel] Fetching attachments for ${baseEvents.length} base events...`);
       for (let event of baseEvents) {
         const attachmentsSql = `
           SELECT
@@ -738,7 +739,14 @@ class CalendarModel extends BaseModel {
         const attachments = await this.db.query(attachmentsSql, [event.calendar_id]);
         event.attachments = attachments;
         event.images = attachments; // For backward compatibility and TV Display
+
+        if (attachments && attachments.length > 0) {
+          console.log(`   ✅ Event "${event.title}" (ID: ${event.calendar_id}) has ${attachments.length} attachments/images`);
+        }
       }
+
+      const eventsWithImages = baseEvents.filter(e => e.images && e.images.length > 0).length;
+      console.log(`🖼️ [CalendarModel] Total base events with images: ${eventsWithImages}/${baseEvents.length}`);
 
       // Generate all events including recurring instances
       const allEvents = [];
@@ -842,12 +850,36 @@ class CalendarModel extends BaseModel {
             originalEndDate: endDateStr
           };
 
+          // CRITICAL: Verify images are preserved in eventCopy
+          if (event.images && event.images.length > 0 && (!eventCopy.images || eventCopy.images.length === 0)) {
+            console.error(`❌ [CalendarModel] IMAGES LOST during eventCopy for event "${event.title}" (ID: ${event.calendar_id})`);
+            console.error(`   Original event.images:`, event.images.length);
+            console.error(`   EventCopy.images:`, eventCopy.images?.length || 0);
+          }
+
           groupedEvents[dateKey].push(eventCopy);
 
           // Move to next day using setDate to avoid timezone issues
           currentDate.setDate(currentDate.getDate() + 1);
         }
       });
+
+      // FINAL VERIFICATION: Check if images are in the grouped events
+      const allGroupedEvents = Object.values(groupedEvents).flat();
+      const groupedEventsWithImages = allGroupedEvents.filter(e => e.images && e.images.length > 0).length;
+      console.log(`🖼️ [CalendarModel] FINAL CHECK - Grouped events with images: ${groupedEventsWithImages}/${allGroupedEvents.length}`);
+
+      if (groupedEventsWithImages > 0) {
+        console.log(`   ✅ Images are preserved in grouped events!`);
+        // Log a sample event with images
+        const sampleEventWithImages = allGroupedEvents.find(e => e.images && e.images.length > 0);
+        if (sampleEventWithImages) {
+          console.log(`   📸 Sample event with images: "${sampleEventWithImages.title}" has ${sampleEventWithImages.images.length} images`);
+        }
+      } else if (eventsWithImages > 0) {
+        console.error(`   ❌ WARNING: Base events had ${eventsWithImages} events with images, but grouped events have 0!`);
+        console.error(`   This means images were LOST during the grouping process!`);
+      }
 
       return groupedEvents;
     } catch (error) {
