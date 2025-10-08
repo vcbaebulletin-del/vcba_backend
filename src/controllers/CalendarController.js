@@ -87,6 +87,16 @@ class CalendarController {
       is_alert = 0
     } = req.body;
 
+    // Enhanced logging for date verification
+    console.log('📅 DATE VERIFICATION - Backend received:', {
+      event_date: event_date,
+      event_date_type: typeof event_date,
+      end_date: end_date,
+      end_date_type: typeof end_date,
+      event_date_format: event_date?.match(/^\d{4}-\d{2}-\d{2}$/) ? 'YYYY-MM-DD ✅' : 'INVALID ❌',
+      end_date_format: end_date ? (end_date.match(/^\d{4}-\d{2}-\d{2}$/) ? 'YYYY-MM-DD ✅' : 'INVALID ❌') : 'Not provided'
+    });
+
     const eventData = {
       title,
       description,
@@ -103,7 +113,19 @@ class CalendarController {
       created_by: req.user.id
     };
 
+    console.log('📅 DATE VERIFICATION - Sending to database:', {
+      event_date: eventData.event_date,
+      end_date: eventData.end_date
+    });
+
     const event = await CalendarModel.createEvent(eventData);
+
+    console.log('📅 DATE VERIFICATION - Database returned:', {
+      event_date: event.event_date,
+      end_date: event.end_date,
+      event_date_type: typeof event.event_date,
+      end_date_type: typeof event.end_date
+    });
 
     // Send SMS notifications if event is marked as alert
     if (is_alert) {
@@ -183,6 +205,16 @@ class CalendarController {
     const { eventId } = req.params;
     const rawData = req.body;
 
+    // Enhanced logging for date verification
+    console.log('📅 DATE VERIFICATION - Backend UPDATE received:', {
+      event_date: rawData.event_date,
+      event_date_type: typeof rawData.event_date,
+      end_date: rawData.end_date,
+      end_date_type: typeof rawData.end_date,
+      event_date_format: rawData.event_date ? (rawData.event_date.match(/^\d{4}-\d{2}-\d{2}$/) ? 'YYYY-MM-DD ✅' : 'INVALID ❌') : 'Not provided',
+      end_date_format: rawData.end_date ? (rawData.end_date.match(/^\d{4}-\d{2}-\d{2}$/) ? 'YYYY-MM-DD ✅' : 'INVALID ❌') : 'Not provided'
+    });
+
     // Process the update data similar to create
     const updateData = {};
 
@@ -198,7 +230,19 @@ class CalendarController {
     if (rawData.allow_comments !== undefined) updateData.allow_comments = rawData.allow_comments ? 1 : 0;
     if (rawData.is_alert !== undefined) updateData.is_alert = rawData.is_alert ? 1 : 0;
 
+    console.log('📅 DATE VERIFICATION - Sending to database for UPDATE:', {
+      event_date: updateData.event_date,
+      end_date: updateData.end_date
+    });
+
     const event = await CalendarModel.updateEvent(parseInt(eventId), updateData);
+
+    console.log('📅 DATE VERIFICATION - Database UPDATE returned:', {
+      event_date: event.event_date,
+      end_date: event.end_date,
+      event_date_type: typeof event.event_date,
+      end_date_type: typeof event.end_date
+    });
 
     res.status(200).json({
       success: true,
