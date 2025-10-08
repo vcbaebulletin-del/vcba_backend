@@ -135,16 +135,37 @@ const auditAuth = (action, success = true) => {
   return async (req, res, next) => {
     const originalJson = res.json;
     const originalSend = res.send;
+    const originalStatus = res.status;
     let captured = false;
+    let capturedStatusCode = null;
+
+    // Intercept res.status() to capture the status code when it's set
+    res.status = function(code) {
+      capturedStatusCode = code;
+      return originalStatus.call(this, code);
+    };
 
     // Intercept res.json to capture and log immediately
     res.json = function(data) {
       if (!captured) {
         captured = true;
-        const statusCode = this.statusCode || 200;
+        // Use captured status code, or fall back to this.statusCode, or default to 200
+        const statusCode = capturedStatusCode || this.statusCode || 200;
 
         // Determine success based on response
         const isSuccess = data && data.success === true && statusCode >= 200 && statusCode < 300;
+
+        // Debug logging for LOGOUT operations
+        if (action.toUpperCase() === 'LOGOUT' || action.toUpperCase() === 'LOGOUT_ALL') {
+          logger.info(`[AUDIT DEBUG] ${action} - Status capture:`, {
+            capturedStatusCode,
+            thisStatusCode: this.statusCode,
+            finalStatusCode: statusCode,
+            dataSuccess: data?.success,
+            isSuccess,
+            userEmail: req.user?.email || req.user?.student_number
+          });
+        }
 
         // Log immediately (synchronously schedule the async operation)
         setImmediate(async () => {
@@ -182,7 +203,8 @@ const auditAuth = (action, success = true) => {
     res.send = function(data) {
       if (!captured && typeof data === 'object') {
         captured = true;
-        const statusCode = this.statusCode || 200;
+        // Use captured status code, or fall back to this.statusCode, or default to 200
+        const statusCode = capturedStatusCode || this.statusCode || 200;
 
         const isSuccess = data && data.success === true && statusCode >= 200 && statusCode < 300;
 
