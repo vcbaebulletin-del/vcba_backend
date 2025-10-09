@@ -38,8 +38,8 @@ class StudentModel extends BaseModel {
           is_active: accountData.is_active !== undefined ? accountData.is_active : true,
           last_login: null,
           created_by: accountData.created_by,
-          created_at: new Date(),
-          updated_at: new Date(),
+          created_at: new Date().toISOString(), // FIX: Use UTC string to prevent timezone conversion
+          updated_at: new Date().toISOString(), // FIX: Use UTC string to prevent timezone conversion
         };
 
         // Insert student account
@@ -387,8 +387,8 @@ class StudentModel extends BaseModel {
     return await this.db.update(
       'student_accounts',
       {
-        last_login: new Date(),
-        updated_at: new Date(),
+        last_login: new Date().toISOString(), // FIX: Use UTC string to prevent timezone conversion
+        updated_at: new Date().toISOString(), // FIX: Use UTC string to prevent timezone conversion
       },
       'student_id = ?',
       [studentId],

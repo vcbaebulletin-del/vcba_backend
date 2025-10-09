@@ -61,7 +61,7 @@ class BaseModel {
   async create(data) {
     try {
       // Add timestamps if they exist in the table
-      const now = new Date();
+      const now = new Date().toISOString(); // FIX: Use UTC string to prevent timezone conversion
       if (this.hasTimestamps()) {
         data.created_at = now;
         data.updated_at = now;
@@ -85,7 +85,7 @@ class BaseModel {
     try {
       // Add updated timestamp if it exists
       if (this.hasTimestamps()) {
-        data.updated_at = new Date();
+        data.updated_at = new Date().toISOString(); // FIX: Use UTC string to prevent timezone conversion
       }
 
       const result = await this.db.update(
@@ -134,7 +134,7 @@ class BaseModel {
   // Soft delete (if deleted_at column exists)
   async softDeleteById(id) {
     try {
-      const data = { deleted_at: new Date() };
+      const data = { deleted_at: new Date().toISOString() }; // FIX: Use UTC string to prevent timezone conversion
       return await this.updateById(id, data);
     } catch (error) {
       throw new DatabaseError(`Failed to soft delete ${this.tableName}: ${error.message}`);

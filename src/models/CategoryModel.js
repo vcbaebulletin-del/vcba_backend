@@ -183,8 +183,8 @@ class CategoryModel extends BaseModel {
       description: categoryData.description || null,
       color_code: categoryData.color_code || '#007bff',
       is_active: categoryData.is_active !== undefined ? categoryData.is_active : true,
-      created_at: new Date(),
-      updated_at: new Date(),
+      created_at: new Date().toISOString(), // FIX: Use UTC string to prevent timezone conversion
+      updated_at: new Date().toISOString(), // FIX: Use UTC string to prevent timezone conversion
     };
 
     const result = await this.db.insert('categories', category);
@@ -385,8 +385,8 @@ class CategoryModel extends BaseModel {
       color_code: subcategoryData.color_code || parentCategory.color_code,
       display_order: displayOrder,
       is_active: subcategoryData.is_active !== undefined ? subcategoryData.is_active : true,
-      created_at: new Date(),
-      updated_at: new Date(),
+      created_at: new Date().toISOString(), // FIX: Use UTC string to prevent timezone conversion
+      updated_at: new Date().toISOString(), // FIX: Use UTC string to prevent timezone conversion
     };
 
     const result = await this.db.insert('subcategories', subcategory);

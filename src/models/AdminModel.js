@@ -49,8 +49,8 @@ class AdminModel extends BaseModel {
           last_login: null,
           password_reset_token: null,
           password_reset_expires: null,
-          created_at: new Date(),
-          updated_at: new Date(),
+          created_at: new Date().toISOString(), // FIX: Use UTC string to prevent timezone conversion
+          updated_at: new Date().toISOString(), // FIX: Use UTC string to prevent timezone conversion
         };
 
         // Insert admin account
@@ -305,8 +305,8 @@ class AdminModel extends BaseModel {
     return await this.db.update(
       'admin_accounts',
       {
-        last_login: new Date(),
-        updated_at: new Date(),
+        last_login: new Date().toISOString(), // FIX: Use UTC string to prevent timezone conversion
+        updated_at: new Date().toISOString(), // FIX: Use UTC string to prevent timezone conversion
       },
       'admin_id = ?',
       [adminId],
