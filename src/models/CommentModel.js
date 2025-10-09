@@ -178,8 +178,8 @@ class CommentModel extends BaseModel {
         user_id: data.user_id,
         comment_text: data.comment_text,
         is_anonymous: data.is_anonymous === true || data.is_anonymous === 'true' || data.is_anonymous === 1 || data.is_anonymous === '1' ? 1 : 0,
-        created_at: new Date(),
-        updated_at: new Date()
+        created_at: new Date().toISOString(), // FIX: Use UTC string to prevent timezone conversion (8-hour offset issue)
+        updated_at: new Date().toISOString()  // FIX: Use UTC string to prevent timezone conversion (8-hour offset issue)
       };
 
       const result = await this.db.insert(this.tableName, commentData);
@@ -599,7 +599,7 @@ class CommentModel extends BaseModel {
         throw new ValidationError('No valid fields to update');
       }
 
-      updateData.updated_at = new Date();
+      updateData.updated_at = new Date().toISOString(); // FIX: Use UTC string to prevent timezone conversion
 
       const result = await this.db.update(
         this.tableName,
@@ -642,8 +642,8 @@ class CommentModel extends BaseModel {
         this.tableName,
         {
           is_deleted: 1,
-          deleted_at: new Date(),
-          updated_at: new Date()
+          deleted_at: new Date().toISOString(), // FIX: Use UTC string to prevent timezone conversion
+          updated_at: new Date().toISOString()  // FIX: Use UTC string to prevent timezone conversion
         },
         `${this.primaryKey} = ?`,
         [id]
@@ -695,7 +695,7 @@ class CommentModel extends BaseModel {
         // Update existing reaction
         await this.db.update(
           'comment_reactions',
-          { reaction_id: reactionId, created_at: new Date() },
+          { reaction_id: reactionId, created_at: new Date().toISOString() }, // FIX: Use UTC string to prevent timezone conversion
           'reaction_log_id = ?',
           [existingReaction.reaction_log_id]
         );
@@ -706,7 +706,7 @@ class CommentModel extends BaseModel {
           user_type: userType,
           user_id: userId,
           reaction_id: reactionId,
-          created_at: new Date()
+          created_at: new Date().toISOString() // FIX: Use UTC string to prevent timezone conversion
         });
       }
 
@@ -740,8 +740,8 @@ class CommentModel extends BaseModel {
           is_flagged: 1,
           flagged_by: flaggedBy,
           flagged_reason: reason,
-          flagged_at: new Date(),
-          updated_at: new Date()
+          flagged_at: new Date().toISOString(), // FIX: Use UTC string to prevent timezone conversion
+          updated_at: new Date().toISOString()  // FIX: Use UTC string to prevent timezone conversion
         },
         `${this.primaryKey} = ?`,
         [commentId]
@@ -833,7 +833,7 @@ class CommentModel extends BaseModel {
           flagged_by: null,
           flagged_reason: null,
           flagged_at: null,
-          updated_at: new Date()
+          updated_at: new Date().toISOString() // FIX: Use UTC string to prevent timezone conversion
         },
         `${this.primaryKey} = ?`,
         [commentId]
@@ -857,8 +857,8 @@ class CommentModel extends BaseModel {
         this.tableName,
         {
           is_deleted: 1,
-          deleted_at: new Date(),
-          updated_at: new Date()
+          deleted_at: new Date().toISOString(), // FIX: Use UTC string to prevent timezone conversion
+          updated_at: new Date().toISOString()  // FIX: Use UTC string to prevent timezone conversion
         },
         `${this.primaryKey} = ?`,
         [commentId]
