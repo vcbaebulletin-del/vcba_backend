@@ -20,7 +20,7 @@ class NotificationModel extends BaseModel {
         related_announcement_id: data.related_announcement_id || null,
         related_comment_id: data.related_comment_id || null,
         is_read: 0,
-        created_at: new Date().toISOString() // FIX: Use UTC string to prevent timezone conversion (8-hour offset issue)
+        created_at: new Date().toISOString().slice(0, 19).replace('T', ' ') // FIX: Convert to MySQL DATETIME format (YYYY-MM-DD HH:MM:SS) in UTC
       };
 
       const result = await this.db.insert(this.tableName, notificationData);
@@ -264,7 +264,7 @@ class NotificationModel extends BaseModel {
         this.tableName,
         {
           is_read: 1,
-          read_at: new Date().toISOString() // FIX: Use UTC string to prevent timezone conversion
+          read_at: new Date().toISOString().slice(0, 19).replace('T', ' ') // FIX: Convert to MySQL DATETIME format in UTC
         },
         `${this.primaryKey} = ?`,
         [id]
@@ -288,7 +288,7 @@ class NotificationModel extends BaseModel {
         this.tableName,
         {
           is_read: 1,
-          read_at: new Date().toISOString() // FIX: Use UTC string to prevent timezone conversion
+          read_at: new Date().toISOString().slice(0, 19).replace('T', ' ') // FIX: Convert to MySQL DATETIME format in UTC
         },
         'recipient_type = ? AND recipient_id = ? AND is_read = 0',
         [userType, userId]
