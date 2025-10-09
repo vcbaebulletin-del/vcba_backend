@@ -57,8 +57,8 @@ class CalendarModel extends BaseModel {
         allow_comments: data.allow_comments !== undefined ? data.allow_comments : 1,
         is_alert: data.is_alert !== undefined ? data.is_alert : 0,
         created_by: data.created_by,
-        created_at: new Date().toISOString(), // FIX: Use UTC string to prevent timezone conversion
-        updated_at: new Date().toISOString()  // FIX: Use UTC string to prevent timezone conversion
+        created_at: new Date(),
+        updated_at: new Date()
       };
 
       const result = await this.db.insert(this.tableName, eventData);

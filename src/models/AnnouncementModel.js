@@ -29,9 +29,9 @@ class AnnouncementModel extends BaseModel {
         scheduled_publish_at: this.formatDateTimeForMySQL(data.scheduled_publish_at),
         visibility_start_at: this.formatDateTimeForMySQL(data.visibility_start_at),
         visibility_end_at: this.formatDateTimeForMySQL(data.visibility_end_at),
-        published_at: data.status === 'published' ? new Date().toISOString() : null, // FIX: Use UTC string
-        created_at: new Date().toISOString(), // FIX: Use UTC string to prevent timezone conversion
-        updated_at: new Date().toISOString()  // FIX: Use UTC string to prevent timezone conversion
+        published_at: data.status === 'published' ? new Date() : null,
+        created_at: new Date(),
+        updated_at: new Date()
       };
 
       const result = await this.db.insert(this.tableName, announcementData);
