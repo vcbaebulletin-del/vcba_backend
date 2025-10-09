@@ -1,0 +1,19 @@
+FORCE RAILWAY DEPLOYMENT - TIMESTAMP FIX
+=========================================
+
+Deployment Trigger: October 9, 2025 - 16:20 UTC+8
+
+CRITICAL FIX: Comment timestamps MySQL DATETIME format
+Commit: a6057ae
+
+This file is created to trigger Railway auto-deployment.
+
+Changes:
+- CommentModel.js: 12 timestamp locations fixed
+- NotificationModel.js: 3 timestamp locations fixed
+
+Format: new Date().toISOString().slice(0, 19).replace('T', ' ')
+Result: "2025-10-09 16:15:46" (MySQL DATETIME format in UTC)
+
+PLEASE DEPLOY NOW!
+
