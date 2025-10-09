@@ -178,8 +178,8 @@ class CommentModel extends BaseModel {
         user_id: data.user_id,
         comment_text: data.comment_text,
         is_anonymous: data.is_anonymous === true || data.is_anonymous === 'true' || data.is_anonymous === 1 || data.is_anonymous === '1' ? 1 : 0,
-        created_at: new Date().toISOString(), // FIX: Use UTC string to prevent timezone conversion (8-hour offset issue)
-        updated_at: new Date().toISOString()  // FIX: Use UTC string to prevent timezone conversion
+        created_at: new Date(),
+        updated_at: new Date()
       };
 
       const result = await this.db.insert(this.tableName, commentData);
@@ -695,7 +695,7 @@ class CommentModel extends BaseModel {
         // Update existing reaction
         await this.db.update(
           'comment_reactions',
-          { reaction_id: reactionId, created_at: new Date().toISOString() }, // FIX: Use UTC string
+          { reaction_id: reactionId, created_at: new Date() },
           'reaction_log_id = ?',
           [existingReaction.reaction_log_id]
         );
@@ -706,7 +706,7 @@ class CommentModel extends BaseModel {
           user_type: userType,
           user_id: userId,
           reaction_id: reactionId,
-          created_at: new Date().toISOString() // FIX: Use UTC string to prevent timezone conversion
+          created_at: new Date()
         });
       }
 
