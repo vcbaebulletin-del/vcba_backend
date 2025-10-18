@@ -316,14 +316,16 @@ router.get('/dashboard/stats', AdminController.getDashboardStats);
 // Student management routes
 // View students - both super_admin and professor can view (read-only for professor)
 router.get('/students', requireViewStudents, getStudentsValidation, validateRequest, auditCRUD('students', { action: 'READ' }), AdminController.getStudents);
-router.get('/students/:studentId', requireViewStudents, studentIdValidation, validateRequest, auditCRUD('students', { action: 'READ' }), AdminController.getStudent);
 
 // Manage students - only super_admin can create, update, delete
 router.post('/students', requireManageStudents, createStudentValidation, validateRequest, auditStudentAction('CREATE'), AdminController.createStudent);
+router.post('/students/bulk-deactivate', requireManageStudents, auditStudentAction('BULK_DEACTIVATE'), AdminController.bulkDeactivate);
+
+// Routes with :studentId parameter must come AFTER specific routes like /bulk-deactivate
+router.get('/students/:studentId', requireViewStudents, studentIdValidation, validateRequest, auditCRUD('students', { action: 'READ' }), AdminController.getStudent);
 router.put('/students/:studentId', requireManageStudents, updateStudentValidation, validateRequest, auditStudentAction('UPDATE'), AdminController.updateStudent);
 router.delete('/students/:studentId', requireManageStudents, studentIdValidation, validateRequest, auditStudentAction('DELETE'), AdminController.deleteStudent);
 router.post('/students/:studentId/reset-password', requireManageStudents, resetPasswordValidation, validateRequest, auditStudentAction('RESET_PASSWORD'), AdminController.resetStudentPassword);
-router.post('/students/bulk-deactivate', requireManageStudents, auditStudentAction('BULK_DEACTIVATE'), AdminController.bulkDeactivate);
 
 // Student profile picture routes - only super_admin can manage
 router.post('/students/:studentId/profile/picture', requireManageStudents, studentIdValidation, validateRequest, handleProfilePictureUpload, AdminController.uploadStudentProfilePicture);
