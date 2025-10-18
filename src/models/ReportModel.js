@@ -495,12 +495,12 @@ class ReportModel extends BaseModel {
       if (fields.includes('Announcements')) {
         const announcements = await this.getAnnouncementsForReport(start_date, end_date);
 
-        announcements.forEach(announcement => {
+        announcements.forEach((announcement, index) => {
           const category = announcement.is_alert ? 'alert' : 'regular';
           tallies.announcements[category]++;
           tallies.announcements.total++;
 
-          reportItems.push({
+          const item = {
             id: `announcement_${announcement.announcement_id}`,
             type: 'Announcement',
             title: announcement.title,
@@ -513,8 +513,21 @@ class ReportModel extends BaseModel {
             posted_by_department: announcement.posted_by_department,
             posted_by_position: announcement.posted_by_position,
             announcement_id: announcement.announcement_id,
-            created_at: announcement.created_at
-          });
+            created_at: announcement.created_at,
+            status: announcement.status,
+            visibility_end_at: announcement.visibility_end_at
+          };
+
+          // Debug: Log first item being added to reportItems
+          if (index === 0) {
+            console.log('📊 [DEBUG] First Announcement Item for Report:', {
+              title: item.title,
+              status: item.status,
+              visibility_end_at: item.visibility_end_at
+            });
+          }
+
+          reportItems.push(item);
         });
       }
 
@@ -522,12 +535,12 @@ class ReportModel extends BaseModel {
       if (fields.includes('SchoolCalendar')) {
         const calendarEvents = await this.getCalendarEventsForReport(start_date, end_date);
 
-        calendarEvents.forEach(event => {
+        calendarEvents.forEach((event, index) => {
           const category = event.is_alert ? 'alert' : 'regular';
           tallies.school_calendar[category]++;
           tallies.school_calendar.total++;
 
-          reportItems.push({
+          const item = {
             id: `calendar_${event.calendar_id}`,
             type: 'Calendar',
             title: event.title,
@@ -541,8 +554,22 @@ class ReportModel extends BaseModel {
             created_by_position: event.created_by_position,
             calendar_id: event.calendar_id,
             created_at: event.created_at,
-            event_date: event.event_date // Keep event_date as additional field
-          });
+            event_date: event.event_date, // Keep event_date as additional field
+            end_date: event.end_date,
+            is_active: event.is_active // Pass is_active directly (0 or 1)
+          };
+
+          // Debug: Log first item being added to reportItems
+          if (index === 0) {
+            console.log('📊 [DEBUG] First Calendar Event Item for Report:', {
+              title: item.title,
+              is_active: item.is_active,
+              end_date: item.end_date,
+              event_date: item.event_date
+            });
+          }
+
+          reportItems.push(item);
         });
       }
 
@@ -589,6 +616,7 @@ class ReportModel extends BaseModel {
           a.created_at,
           a.posted_by,
           a.status,
+          a.visibility_end_at,
           a.deleted_at,
           a.archived_at,
           COALESCE(
@@ -605,31 +633,72 @@ class ReportModel extends BaseModel {
           ) as posted_by_name,
           COALESCE(ap.department, 'Unknown Department') as posted_by_department,
           COALESCE(ap.position, 'Unknown Position') as posted_by_position,
-          GROUP_CONCAT(
-            CASE
-              WHEN att.file_path IS NOT NULL
-              THEN att.file_path
-              ELSE NULL
-            END
-          ) as image_paths
+          GROUP_CONCAT(DISTINCT att.file_path) as image_paths
         FROM announcements a
         LEFT JOIN admin_accounts aa ON a.posted_by = aa.admin_id
         LEFT JOIN admin_profiles ap ON aa.admin_id = ap.admin_id
         LEFT JOIN announcement_attachments att ON a.announcement_id = att.announcement_id
         WHERE a.created_at >= ?
           AND a.created_at <= ?
-        GROUP BY a.announcement_id, a.title, a.content, a.is_alert, a.created_at, a.posted_by, a.status,
-                 a.deleted_at, a.archived_at, posted_by_name, posted_by_department, posted_by_position
+        GROUP BY 
+          a.announcement_id,
+          a.title,
+          a.content,
+          a.is_alert,
+          a.created_at,
+          a.posted_by,
+          a.status,
+          a.visibility_end_at,
+          a.deleted_at,
+          a.archived_at,
+          aa.email,
+          ap.first_name,
+          ap.last_name,
+          ap.department,
+          ap.position
         ORDER BY a.created_at DESC
       `;
 
       const results = await this.query(query, [start_date, end_date]);
 
-      // Process image paths
-      return results.map(announcement => ({
-        ...announcement,
-        images: announcement.image_paths ? announcement.image_paths.split(',').filter(Boolean) : []
-      }));
+      // Debug: Log first announcement to verify ALL fields
+      if (results.length > 0) {
+        console.log('📊 [DEBUG] Sample Announcement from DB - ALL FIELDS:', results[0]);
+        console.log('📊 [DEBUG] Specific fields check:', {
+          announcement_id: results[0].announcement_id,
+          title: results[0].title,
+          status: results[0].status,
+          visibility_end_at: results[0].visibility_end_at,
+          created_at: results[0].created_at,
+          has_status: 'status' in results[0],
+          has_visibility_end_at: 'visibility_end_at' in results[0]
+        });
+      }
+
+      // Process image paths and ensure all fields are preserved
+      const processed = results.map(announcement => {
+        const result = {
+          ...announcement,
+          images: announcement.image_paths ? announcement.image_paths.split(',').filter(Boolean) : []
+        };
+        // Remove image_paths as it's now converted to images array
+        delete result.image_paths;
+        return result;
+      });
+
+      // Debug: Log first processed announcement
+      if (processed.length > 0) {
+        console.log('📊 [DEBUG] First processed announcement:', {
+          announcement_id: processed[0].announcement_id,
+          title: processed[0].title,
+          status: processed[0].status,
+          visibility_end_at: processed[0].visibility_end_at,
+          has_status: 'status' in processed[0],
+          has_visibility_end_at: 'visibility_end_at' in processed[0]
+        });
+      }
+
+      return processed;
 
     } catch (error) {
       logger.error('Error getting announcements for report:', error);
@@ -652,6 +721,7 @@ class ReportModel extends BaseModel {
           sc.description,
           sc.is_alert,
           sc.event_date,
+          sc.end_date,
           sc.created_at,
           sc.created_by,
           sc.is_active,
@@ -671,31 +741,74 @@ class ReportModel extends BaseModel {
           ) as created_by_name,
           COALESCE(ap.department, 'Unknown Department') as created_by_department,
           COALESCE(ap.position, 'Unknown Position') as created_by_position,
-          GROUP_CONCAT(
-            CASE
-              WHEN ca.file_path IS NOT NULL
-              THEN ca.file_path
-              ELSE NULL
-            END
-          ) as image_paths
+          GROUP_CONCAT(DISTINCT ca.file_path) as image_paths
         FROM school_calendar sc
         LEFT JOIN admin_accounts aa ON sc.created_by = aa.admin_id
         LEFT JOIN admin_profiles ap ON aa.admin_id = ap.admin_id
         LEFT JOIN calendar_attachments ca ON sc.calendar_id = ca.calendar_id
         WHERE sc.created_at >= ?
           AND sc.created_at <= ?
-        GROUP BY sc.calendar_id, sc.title, sc.description, sc.is_alert, sc.event_date, sc.created_at, sc.created_by,
-                 sc.is_active, sc.is_published, sc.deleted_at, created_by_name, created_by_department, created_by_position
+        GROUP BY 
+          sc.calendar_id,
+          sc.title,
+          sc.description,
+          sc.is_alert,
+          sc.event_date,
+          sc.end_date,
+          sc.created_at,
+          sc.created_by,
+          sc.is_active,
+          sc.is_published,
+          sc.deleted_at,
+          aa.email,
+          ap.first_name,
+          ap.last_name,
+          ap.department,
+          ap.position
         ORDER BY sc.created_at DESC
       `;
 
       const results = await this.query(query, [start_date, end_date]);
 
-      // Process image paths
-      return results.map(event => ({
-        ...event,
-        images: event.image_paths ? event.image_paths.split(',').filter(Boolean) : []
-      }));
+      // Debug: Log first calendar event to verify ALL fields
+      if (results.length > 0) {
+        console.log('📊 [DEBUG] Sample Calendar Event from DB - ALL FIELDS:', results[0]);
+        console.log('📊 [DEBUG] Specific fields check:', {
+          calendar_id: results[0].calendar_id,
+          title: results[0].title,
+          is_active: results[0].is_active,
+          end_date: results[0].end_date,
+          event_date: results[0].event_date,
+          created_at: results[0].created_at,
+          has_is_active: 'is_active' in results[0],
+          has_end_date: 'end_date' in results[0]
+        });
+      }
+
+      // Process image paths and ensure all fields are preserved
+      const processed = results.map(event => {
+        const result = {
+          ...event,
+          images: event.image_paths ? event.image_paths.split(',').filter(Boolean) : []
+        };
+        // Remove image_paths as it's now converted to images array
+        delete result.image_paths;
+        return result;
+      });
+
+      // Debug: Log first processed calendar event
+      if (processed.length > 0) {
+        console.log('📊 [DEBUG] First processed calendar event:', {
+          calendar_id: processed[0].calendar_id,
+          title: processed[0].title,
+          is_active: processed[0].is_active,
+          end_date: processed[0].end_date,
+          has_is_active: 'is_active' in processed[0],
+          has_end_date: 'end_date' in processed[0]
+        });
+      }
+
+      return processed;
 
     } catch (error) {
       logger.error('Error getting calendar events for report:', error);
