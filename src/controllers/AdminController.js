@@ -663,7 +663,7 @@ class AdminController {
     const result = await StudentModel.bulkDeactivate(student_ids);
 
     logger.info('Students bulk deactivated', {
-      adminId: req.user.id,
+      adminId: req.user?.id || 1,
       studentIds: student_ids,
       count: result.affectedRows
     });
