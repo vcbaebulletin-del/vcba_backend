@@ -768,7 +768,7 @@ class StudentModel extends BaseModel {
       WHERE student_id IN (${placeholders})
     `;
 
-    const [result] = await this.db.execute(sql, studentIds);
+    const result = await this.db.execute(sql, studentIds);
     return result;
   }
 }

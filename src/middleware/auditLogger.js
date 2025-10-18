@@ -21,7 +21,7 @@ const auditLogger = (options = {}) => {
     const originalJson = res.json.bind(res);
 
     res.json = function(data) {
-      // Call original json method first
+      // Call original json method first to send response immediately
       const result = originalJson(data);
 
       // Only log if the operation was successful
@@ -268,9 +268,22 @@ const auditStudentAction = (action) => {
   return auditLogger({
     action,
     table: 'students',
-    getRecordId: (req, res, data) => req.params.studentId || req.params.id,
+    getRecordId: (req, res, data) => {
+      // For bulk operations, use the count from response data
+      if (action === 'BULK_DEACTIVATE' && data?.data?.affectedRows) {
+        return `bulk_${data.data.affectedRows}`;
+      }
+      return req.params.studentId || req.params.id;
+    },
     getDescription: (req, res, data) => {
       const adminEmail = req.user?.email || 'Unknown admin';
+      
+      // Special handling for bulk operations
+      if (action === 'BULK_DEACTIVATE') {
+        const count = data?.data?.affectedRows || req.body?.student_ids?.length || 0;
+        return `${adminEmail} performed ${action} on ${count} student(s)`;
+      }
+      
       const studentId = req.params.studentId || req.params.id;
       return `${adminEmail} performed ${action} on student${studentId ? ` (ID: ${studentId})` : ''}`;
     }
