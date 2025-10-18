@@ -750,6 +750,27 @@ class StudentModel extends BaseModel {
       throw error;
     }
   }
+
+  /**
+   * Bulk deactivate student accounts
+   * @param {number[]} studentIds - Array of student IDs to deactivate
+   * @returns {Promise<Object>} - Result with affectedRows count
+   */
+  async bulkDeactivate(studentIds) {
+    if (!studentIds || studentIds.length === 0) {
+      throw new ValidationError('Student IDs are required');
+    }
+
+    const placeholders = studentIds.map(() => '?').join(',');
+    const sql = `
+      UPDATE student_accounts 
+      SET is_active = false, updated_at = NOW() 
+      WHERE student_id IN (${placeholders})
+    `;
+
+    const [result] = await this.db.execute(sql, studentIds);
+    return result;
+  }
 }
 
 module.exports = new StudentModel();

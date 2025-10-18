@@ -648,6 +648,32 @@ class AdminController {
       },
     });
   });
+
+  // Bulk deactivate student accounts
+  bulkDeactivate = asyncHandler(async (req, res) => {
+    const { student_ids } = req.body;
+
+    if (!student_ids || !Array.isArray(student_ids) || student_ids.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: { message: 'student_ids array is required' }
+      });
+    }
+
+    const result = await StudentModel.bulkDeactivate(student_ids);
+
+    logger.info('Students bulk deactivated', {
+      adminId: req.user.id,
+      studentIds: student_ids,
+      count: result.affectedRows
+    });
+
+    res.status(200).json({
+      success: true,
+      message: `Successfully deactivated ${result.affectedRows} student(s)`,
+      data: { affectedRows: result.affectedRows }
+    });
+  });
 }
 
 module.exports = new AdminController();

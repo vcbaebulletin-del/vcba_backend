@@ -323,6 +323,7 @@ router.post('/students', requireManageStudents, createStudentValidation, validat
 router.put('/students/:studentId', requireManageStudents, updateStudentValidation, validateRequest, auditStudentAction('UPDATE'), AdminController.updateStudent);
 router.delete('/students/:studentId', requireManageStudents, studentIdValidation, validateRequest, auditStudentAction('DELETE'), AdminController.deleteStudent);
 router.post('/students/:studentId/reset-password', requireManageStudents, resetPasswordValidation, validateRequest, auditStudentAction('RESET_PASSWORD'), AdminController.resetStudentPassword);
+router.post('/students/bulk-deactivate', requireManageStudents, auditStudentAction('BULK_DEACTIVATE'), AdminController.bulkDeactivate);
 
 // Student profile picture routes - only super_admin can manage
 router.post('/students/:studentId/profile/picture', requireManageStudents, studentIdValidation, validateRequest, handleProfilePictureUpload, AdminController.uploadStudentProfilePicture);
