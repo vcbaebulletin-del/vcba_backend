@@ -100,12 +100,18 @@ class AuthService {
   // Student login
   async loginStudent(identifier, password, ipAddress, userAgent) {
     try {
-      // Find student by email or student number
+      // TEMPORARY: Find student by username (stored in email field) or student number - REVERT IN FUTURE
+      // Original logic checked for '@' to determine email vs student number
       let student;
-      if (identifier.includes('@')) {
-        student = await StudentModel.findByEmailWithProfile(identifier);
-      } else {
+      
+      // Try to find by student number first (if identifier is all digits)
+      if (/^\d+$/.test(identifier)) {
         student = await StudentModel.findByStudentNumberWithProfile(identifier);
+      }
+      
+      // If not found or identifier is not all digits, try by username (email field)
+      if (!student) {
+        student = await StudentModel.findByEmailWithProfile(identifier);
       }
 
       if (!student) {
