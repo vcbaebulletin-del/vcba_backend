@@ -727,7 +727,8 @@ class ReportModel extends BaseModel {
   }
 
   /**
-   * Get calendar events for monthly report - INCLUDES ALL RECORDS (active, inactive, deleted)
+   * Get calendar events for monthly report - INCLUDES ALL USER-MADE EVENTS (active, archived, deleted)
+   * EXCLUDES holidays (is_holiday = 1) as they are API-imported and not user-created content
    * @param {string} start_date - Start date (ISO format)
    * @param {string} end_date - End date (ISO format)
    * @returns {Promise<Array>} Calendar events with images and admin names
@@ -775,6 +776,7 @@ class ReportModel extends BaseModel {
         LEFT JOIN calendar_attachments ca ON sc.calendar_id = ca.calendar_id
         WHERE sc.event_date >= ?
           AND sc.event_date <= ?
+          AND sc.is_holiday = 0
         GROUP BY 
           sc.calendar_id,
           sc.title,
