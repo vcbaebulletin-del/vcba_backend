@@ -8,10 +8,11 @@ const { auditAuth } = require('../middleware/auditLogger');
 const router = express.Router();
 
 // Validation rules
+// TEMPORARY: Email field now accepts username format - REVERT IN FUTURE
 const loginValidation = [
   body('email')
     .notEmpty()
-    .withMessage('Email or student number is required')
+    .withMessage('Username or student number is required')
     .trim(),
   body('password')
     .notEmpty()
@@ -45,10 +46,19 @@ const validateTokenValidation = [
 ];
 
 const adminRegisterValidation = [
+  // TEMPORARY: Accept username format instead of email - REVERT IN FUTURE
   body('email')
-    .isEmail()
-    .withMessage('Email must be a valid email address')
-    .normalizeEmail(),
+    .notEmpty()
+    .withMessage('Username is required')
+    .trim()
+    .isLength({ min: 3 })
+    .withMessage('Username must be at least 3 characters long')
+    .matches(/^[a-zA-Z0-9_]+$/)
+    .withMessage('Username can only contain letters, numbers, and underscores'),
+  // Original validation (commented for future revert):
+  // .isEmail()
+  // .withMessage('Email must be a valid email address')
+  // .normalizeEmail(),
   body('password')
     .isLength({ min: 8 })
     .withMessage('Password must be at least 8 characters long')

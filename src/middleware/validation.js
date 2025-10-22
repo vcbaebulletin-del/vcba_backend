@@ -128,12 +128,20 @@ const sanitizers = {
 
 // Common validation chains
 const commonValidations = {
+  // TEMPORARY: Email validation modified to accept username format - REVERT IN FUTURE
   email: (fieldName = 'email') => [
     body(fieldName)
-      .isEmail()
-      .withMessage(`${fieldName} must be a valid email address`)
-      .normalizeEmail()
-      .trim(),
+      .notEmpty()
+      .withMessage(`${fieldName} is required`)
+      .trim()
+      .isLength({ min: 3 })
+      .withMessage(`${fieldName} must be at least 3 characters long`)
+      .matches(/^[a-zA-Z0-9_]+$/)
+      .withMessage(`${fieldName} can only contain letters, numbers, and underscores`),
+    // Original validation (commented for future revert):
+    // .isEmail()
+    // .withMessage(`${fieldName} must be a valid email address`)
+    // .normalizeEmail()
   ],
 
   password: (fieldName = 'password', minLength = 8) => [

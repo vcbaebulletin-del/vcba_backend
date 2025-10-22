@@ -22,10 +22,16 @@ const adminIdValidation = [
 ];
 
 const createAdminValidation = [
+  // TEMPORARY: Accept username format instead of email - REVERT IN FUTURE
   body('email')
-    .isEmail()
-    .normalizeEmail()
-    .withMessage('Valid email is required'),
+    .notEmpty()
+    .withMessage('Username is required')
+    .trim()
+    .isLength({ min: 3 })
+    .withMessage('Username must be at least 3 characters long')
+    .matches(/^[a-zA-Z0-9_]+$/)
+    .withMessage('Username can only contain letters, numbers, and underscores'),
+  // Original: .isEmail().normalizeEmail().withMessage('Valid email is required'),
   body('password')
     .isLength({ min: 8 })
     .withMessage('Password must be at least 8 characters long')
