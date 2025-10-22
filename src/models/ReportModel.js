@@ -505,7 +505,7 @@ class ReportModel extends BaseModel {
             type: 'Announcement',
             title: announcement.title,
             content: announcement.content,
-            date: announcement.created_at,
+            date: announcement.visibility_start_at, // Use visibility_start_at as the primary date
             category,
             images: announcement.images || [],
             posted_by: announcement.posted_by,
@@ -514,8 +514,12 @@ class ReportModel extends BaseModel {
             posted_by_position: announcement.posted_by_position,
             announcement_id: announcement.announcement_id,
             created_at: announcement.created_at,
+            visibility_start_at: announcement.visibility_start_at,
             status: announcement.status,
-            visibility_end_at: announcement.visibility_end_at
+            derived_status: announcement.derived_status, // Include derived status
+            visibility_end_at: announcement.visibility_end_at,
+            deleted_at: announcement.deleted_at,
+            archived_at: announcement.archived_at
           };
 
           // Debug: Log first item being added to reportItems
@@ -523,7 +527,11 @@ class ReportModel extends BaseModel {
             console.log('📊 [DEBUG] First Announcement Item for Report:', {
               title: item.title,
               status: item.status,
-              visibility_end_at: item.visibility_end_at
+              derived_status: item.derived_status,
+              visibility_start_at: item.visibility_start_at,
+              visibility_end_at: item.visibility_end_at,
+              deleted_at: item.deleted_at,
+              archived_at: item.archived_at
             });
           }
 
@@ -545,7 +553,7 @@ class ReportModel extends BaseModel {
             type: 'Calendar',
             title: event.title,
             content: event.description || '',
-            date: event.created_at, // Use created_at for consistency with announcements
+            date: event.event_date || event.created_at, // Use event_date as primary, fallback to created_at if NULL
             category,
             images: event.images || [],
             created_by: event.created_by,
@@ -554,9 +562,12 @@ class ReportModel extends BaseModel {
             created_by_position: event.created_by_position,
             calendar_id: event.calendar_id,
             created_at: event.created_at,
-            event_date: event.event_date, // Keep event_date as additional field
+            event_date: event.event_date,
             end_date: event.end_date,
-            is_active: event.is_active // Pass is_active directly (0 or 1)
+            is_active: event.is_active, // Pass is_active directly (0 or 1)
+            is_holiday: event.is_holiday, // Pass is_holiday flag
+            derived_status: event.derived_status, // Include derived status (now includes 'Holiday')
+            deleted_at: event.deleted_at
           };
 
           // Debug: Log first item being added to reportItems
@@ -564,8 +575,10 @@ class ReportModel extends BaseModel {
             console.log('📊 [DEBUG] First Calendar Event Item for Report:', {
               title: item.title,
               is_active: item.is_active,
+              derived_status: item.derived_status,
+              event_date: item.event_date,
               end_date: item.end_date,
-              event_date: item.event_date
+              deleted_at: item.deleted_at
             });
           }
 
@@ -616,9 +629,15 @@ class ReportModel extends BaseModel {
           a.created_at,
           a.posted_by,
           a.status,
+          a.visibility_start_at,
           a.visibility_end_at,
           a.deleted_at,
           a.archived_at,
+          CASE
+            WHEN a.deleted_at IS NOT NULL THEN 'Deleted'
+            WHEN a.archived_at IS NOT NULL OR a.status = 'archived' THEN 'Archived'
+            ELSE COALESCE(a.status, 'Unknown')
+          END as derived_status,
           COALESCE(
             CONCAT(
               TRIM(COALESCE(ap.first_name, '')),
@@ -638,8 +657,8 @@ class ReportModel extends BaseModel {
         LEFT JOIN admin_accounts aa ON a.posted_by = aa.admin_id
         LEFT JOIN admin_profiles ap ON aa.admin_id = ap.admin_id
         LEFT JOIN announcement_attachments att ON a.announcement_id = att.announcement_id
-        WHERE a.created_at >= ?
-          AND a.created_at <= ?
+        WHERE a.visibility_start_at >= ?
+          AND a.visibility_start_at <= ?
         GROUP BY 
           a.announcement_id,
           a.title,
@@ -648,6 +667,7 @@ class ReportModel extends BaseModel {
           a.created_at,
           a.posted_by,
           a.status,
+          a.visibility_start_at,
           a.visibility_end_at,
           a.deleted_at,
           a.archived_at,
@@ -656,7 +676,7 @@ class ReportModel extends BaseModel {
           ap.last_name,
           ap.department,
           ap.position
-        ORDER BY a.created_at DESC
+        ORDER BY a.visibility_start_at DESC
       `;
 
       const results = await this.query(query, [start_date, end_date]);
@@ -727,6 +747,13 @@ class ReportModel extends BaseModel {
           sc.is_active,
           sc.is_published,
           sc.deleted_at,
+          sc.is_holiday,
+          CASE
+            WHEN sc.deleted_at IS NOT NULL THEN 'Deleted'
+            WHEN sc.is_holiday = 1 THEN 'Holiday'
+            WHEN sc.is_active = 0 THEN 'Archived'
+            ELSE 'Active'
+          END as derived_status,
           COALESCE(
             CONCAT(
               TRIM(COALESCE(ap.first_name, '')),
@@ -746,8 +773,8 @@ class ReportModel extends BaseModel {
         LEFT JOIN admin_accounts aa ON sc.created_by = aa.admin_id
         LEFT JOIN admin_profiles ap ON aa.admin_id = ap.admin_id
         LEFT JOIN calendar_attachments ca ON sc.calendar_id = ca.calendar_id
-        WHERE sc.created_at >= ?
-          AND sc.created_at <= ?
+        WHERE sc.event_date >= ?
+          AND sc.event_date <= ?
         GROUP BY 
           sc.calendar_id,
           sc.title,
@@ -765,7 +792,7 @@ class ReportModel extends BaseModel {
           ap.last_name,
           ap.department,
           ap.position
-        ORDER BY sc.created_at DESC
+        ORDER BY sc.event_date DESC
       `;
 
       const results = await this.query(query, [start_date, end_date]);

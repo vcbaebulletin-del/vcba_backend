@@ -161,6 +161,7 @@ class AutoArchiver {
       await this.connection.beginTransaction();
 
       // Find expired calendar events that are still active and not deleted
+      // EXCLUDE holidays (is_holiday = 1) - these should never be archived
       const findExpiredQuery = `
         SELECT 
           calendar_id,
@@ -174,6 +175,7 @@ class AutoArchiver {
           AND end_date <= ?
           AND is_active = 1
           AND deleted_at IS NULL
+          AND is_holiday = 0
         FOR UPDATE;
       `;
 
@@ -189,6 +191,7 @@ class AutoArchiver {
       logger.info(`Found ${expiredEvents.length} expired calendar events to archive`);
 
       // Archive each expired event by setting is_active = 0 and updating timestamp
+      // Double-check is_holiday = 0 to prevent archiving holidays
       const archiveQuery = `
         UPDATE school_calendar 
         SET 
@@ -196,7 +199,8 @@ class AutoArchiver {
           updated_at = ?
         WHERE calendar_id = ?
           AND is_active = 1
-          AND deleted_at IS NULL;
+          AND deleted_at IS NULL
+          AND is_holiday = 0;
       `;
 
       for (const event of expiredEvents) {
