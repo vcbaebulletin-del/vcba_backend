@@ -27,6 +27,7 @@ const createAdminValidation = [
     .notEmpty()
     .withMessage('Username is required')
     .trim()
+    .toLowerCase()
     .isLength({ min: 3 })
     .withMessage('Username must be at least 3 characters long')
     .matches(/^[a-zA-Z0-9_]+$/)
